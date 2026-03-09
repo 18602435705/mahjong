@@ -1,0 +1,17 @@
+{
+  "name": "react-mono",
+  "version": "1.0.0",
+  "private": true,
+  "description": "React monorepo project",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.10.0"
+}
