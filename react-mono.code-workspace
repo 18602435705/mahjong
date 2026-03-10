@@ -8,6 +8,10 @@
       "name": "📊 chart",
       "path": "apps/chart",
     },
+    {
+      "name": "📊 demo",
+      "path": "apps/demo",
+    },
   ],
   "settings": {},
   "extensions": {
