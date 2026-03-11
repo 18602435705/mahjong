@@ -1,12 +1,7 @@
-import DynamicBarChart from '../components/DynamicBarChart';
+import DynamicBarChart from "../components/DynamicBarChart";
 
 function Home() {
-  return (
-    <div style={{ padding: '20px' }}>
-      <h1>欢迎来到图表应用</h1>
-      <DynamicBarChart />
-    </div>
-  );
+  return <DynamicBarChart />;
 }
 
 export default Home;

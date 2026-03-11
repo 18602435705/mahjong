@@ -164,8 +164,8 @@ const DynamicBarChart = () => {
 
     chart.setOption(option);
 
-    // 定时更新
-    const timer = setInterval(() => {
+    // 更新函数
+    const updateChart = () => {
       currentYear++;
       if (currentYear > endYear) {
         currentYear = 2010;
@@ -196,7 +196,11 @@ const DynamicBarChart = () => {
       };
 
       chart.setOption(newOption);
-    }, updateFrequency);
+    };
+
+    // 立即开始动画
+    updateChart();
+    const timer = setInterval(updateChart, updateFrequency);
 
     // 响应式
     const handleResize = () => chart.resize();
