@@ -1,12 +1,16 @@
-import DynamicBarChart from './components/DynamicBarChart'
-import './App.css'
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import ChartList from "./pages/ChartList";
+import About from "./pages/About";
 
 function App() {
   return (
-    <div style={{ padding: '20px' }}>
-      <DynamicBarChart />
-    </div>
-  )
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/charts" element={<ChartList />} />
+      <Route path="/about" element={<About />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
