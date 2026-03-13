@@ -1,0 +1,16 @@
+/* .wrapper {
+  width: 100vw;
+  height: 100vh;
+  background: red;
+  outline: 1px solid blue;
+  mask-repeat: no-repeat;
+  mask-image: linear-gradient(black, black), url(/Polygon.svg);
+  mask-size:
+    100% 100%,
+    150px 120px;
+  mask-composite: exclude;
+} */
+
+.wrapper {
+  height: 100vh;
+}

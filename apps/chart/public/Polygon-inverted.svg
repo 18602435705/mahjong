@@ -1,0 +1,9 @@
+<svg width="150" height="120" viewBox="0 0 150 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 矩形背景 + 反向三角形 = 镂空效果 (fill-rule: evenodd) -->
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M0 0H150V120H0V0ZM75 96L15.875 10H134.125L75 96Z"
+    fill="black"
+  />
+</svg>

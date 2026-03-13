@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
+import { useVideoRecorder } from '../hooks/useVideoRecorder';
 
 // 各国家/地区颜色
 const countryColors: Record<string, string> = {
@@ -66,6 +67,27 @@ const DynamicBarChart = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
 
+  const {
+    isRecording,
+    recordedVideoUrl,
+    startRecording,
+    stopRecording,
+    downloadVideo
+  } = useVideoRecorder({
+    frameRate: 30,
+    videoBitsPerSecond: 5000000
+  });
+
+  // 开始录制
+  const handleStartRecording = () => {
+    if (chartRef.current) {
+      const canvas = chartRef.current.querySelector('canvas');
+      if (canvas) {
+        startRecording(canvas);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!chartRef.current) return;
 
@@ -77,6 +99,7 @@ const DynamicBarChart = () => {
     const endYear = 2024;
 
     const option: echarts.EChartsOption = {
+      backgroundColor: '#fff',
       title: {
         text: '人均收入动态排行榜',
         subtext: '单位：美元',
@@ -214,13 +237,90 @@ const DynamicBarChart = () => {
   }, []);
 
   return (
-    <div
-      ref={chartRef}
-      style={{
-        width: '100%',
-        height: '600px'
-      }}
-    />
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+        {!isRecording ? (
+          <button
+            onClick={handleStartRecording}
+            style={{
+              padding: '8px 16px',
+              background: '#1890ff',
+              color: 'white',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer'
+            }}
+          >
+            🎬 开始录制
+          </button>
+        ) : (
+          <button
+            onClick={stopRecording}
+            style={{
+              padding: '8px 16px',
+              background: '#ff4d4f',
+              color: 'white',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer'
+            }}
+          >
+            ⏹️ 停止录制
+          </button>
+        )}
+
+        {recordedVideoUrl && (
+          <>
+            <button
+              onClick={() => downloadVideo(`dynamic-chart-${Date.now()}.webm`)}
+              style={{
+                padding: '8px 16px',
+                background: '#52c41a',
+                color: 'white',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer'
+              }}
+            >
+              📥 下载视频
+            </button>
+            <a
+              href={recordedVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '8px 16px',
+                background: '#722ed1',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: 4
+              }}
+            >
+              ▶️ 预览视频
+            </a>
+          </>
+        )}
+      </div>
+
+      <div
+        ref={chartRef}
+        style={{
+          width: '100%',
+          height: '600px'
+        }}
+      />
+
+      {recordedVideoUrl && (
+        <div style={{ marginTop: 16 }}>
+          <h4>录制预览：</h4>
+          <video
+            src={recordedVideoUrl}
+            controls
+            style={{ maxWidth: '100%', border: '1px solid #d9d9d9' }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
