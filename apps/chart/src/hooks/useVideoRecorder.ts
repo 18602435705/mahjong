@@ -39,6 +39,8 @@ export const useVideoRecorder = (
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const isRecordingRef = useRef(false);
+  const actualMimeTypeRef = useRef<string>("video/webm");
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
@@ -53,6 +55,8 @@ export const useVideoRecorder = (
         const supportedMimeType = MediaRecorder.isTypeSupported(mimeType)
           ? mimeType
           : "video/webm";
+
+        actualMimeTypeRef.current = supportedMimeType;
 
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType: supportedMimeType,
@@ -72,16 +76,19 @@ export const useVideoRecorder = (
           const url = URL.createObjectURL(blob);
           setRecordedVideoUrl(url);
           setIsRecording(false);
+          isRecordingRef.current = false;
         };
 
         mediaRecorder.onerror = (event) => {
           console.error("MediaRecorder error:", event);
           setIsRecording(false);
+          isRecordingRef.current = false;
         };
 
         mediaRecorderRef.current = mediaRecorder;
         mediaRecorder.start(100); // 每100ms收集一次数据
         setIsRecording(true);
+        isRecordingRef.current = true;
       } catch (error) {
         console.error("Failed to start recording:", error);
       }
@@ -91,19 +98,23 @@ export const useVideoRecorder = (
 
   // 停止录制
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && isRecordingRef.current) {
       mediaRecorderRef.current.stop();
     }
-  }, [isRecording]);
+  }, []);
 
   // 下载视频
   const downloadVideo = useCallback(
     (filename?: string) => {
       if (!recordedVideoUrl) return;
 
+      // 根据实际的 mimeType 确定文件扩展名
+      const mimeType = actualMimeTypeRef.current;
+      const extension = mimeType.includes("mp4") ? "mp4" : "webm";
+
       const a = document.createElement("a");
       a.href = recordedVideoUrl;
-      a.download = filename || `recording-${Date.now()}.webm`;
+      a.download = filename || `recording-${Date.now()}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
