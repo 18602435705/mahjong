@@ -1,39 +1,69 @@
-import styles from './index.module.less';
+import { Link } from "react-router-dom";
+import styles from "./index.module.less";
+import { blogPosts } from "./data";
 
 const Home = () => {
   return (
-    <div className={styles.homeContainer}>
-      <div className={styles.hero}>
-        <h1 className={styles.title}>欢迎来到手机商城</h1>
-        <p className={styles.subtitle}>发现最新、最热门的智能手机</p>
-        <button className={styles.ctaButton}>开始探索</button>
-      </div>
+    <div className={styles.blogContainer}>
+      {/* Hero Section */}
+      <header className={styles.hero}>
+        <h1 className={styles.heroTitle}> technify 博客 </h1>
+        <p className={styles.heroSubtitle}>分享前端开发、编程技术和技术思考</p>
+        <Link to="/posts" className={styles.exploreButton}>
+          浏览所有文章
+        </Link>
+      </header>
 
-      <div className={styles.features}>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>📱</div>
-          <h3 className={styles.featureTitle}>精选手机</h3>
-          <p className={styles.featureDescription}>汇集全球顶尖品牌最新款智能手机</p>
+      {/* Featured Posts */}
+      <section className={styles.featuredSection}>
+        <h2 className={styles.sectionTitle}>最新文章</h2>
+        <div className={styles.postGrid}>
+          {blogPosts.map((post) => (
+            <article key={post.id} className={styles.postCard}>
+              <div className={styles.postImageContainer}>
+                <img
+                  src={post.imageUrl}
+                  alt={post.title}
+                  className={styles.postImage}
+                  loading="lazy"
+                />
+              </div>
+              <div className={styles.postContent}>
+                <div className={styles.postMeta}>
+                  <span className={styles.postDate}>{post.date}</span>
+                  <span className={styles.postReadTime}>· {post.readTime}</span>
+                </div>
+                <h3 className={styles.postTitle}>
+                  <Link to={`/posts/${post.id}`} className={styles.postLink}>
+                    {post.title}
+                  </Link>
+                </h3>
+                <p className={styles.postExcerpt}>{post.excerpt}</p>
+                <div className={styles.postTags}>
+                  {post.tags.map((tag) => (
+                    <span key={tag} className={styles.tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className={styles.postAuthor}>
+                  <span>by {post.author}</span>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
+      </section>
 
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>💰</div>
-          <h3 className={styles.featureTitle}>超值价格</h3>
-          <p className={styles.featureDescription}>优质价格，让您的每一分钱都物有所值</p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>🚚</div>
-          <h3 className={styles.featureTitle}>快速配送</h3>
-          <p className={styles.featureDescription}>全国包邮，快速到达您的手中</p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>🔒</div>
-          <h3 className={styles.featureTitle}>品质保证</h3>
-          <p className={styles.featureDescription}>正品保证，售后服务无忧</p>
-        </div>
-      </div>
+      {/* About Section */}
+      <section className={styles.aboutSection}>
+        <h2 className={styles.sectionTitle}>关于本站</h2>
+        <p className={styles.aboutContent}>
+          technify 是一个分享前端开发技术和编程经验的个人博客。我们致力于
+          提供高质量的技术内容，帮助开发者成长和进步。内容涵盖 React、
+          TypeScript、CSS、构建工具等多个领域。
+        </p>
+      </section>
     </div>
   );
 };
