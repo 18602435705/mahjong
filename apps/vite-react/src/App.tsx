@@ -95,26 +95,26 @@ function App() {
   return (
     <div className="mahjong-app">
       <header className="topbar">
-        <div>
+        <div className="topbar-title">
           <h1>川麻单机局</h1>
           <p className="subtitle">
             规则：可碰可杠不可吃｜禁止点炮（仅自摸/抢杠胡）｜无换三张｜无定缺｜非血战｜无流局结算
           </p>
         </div>
         <div className="round-actions">
-          <button type="button" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
+          <button type="button" className="btn-main" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
             再来一局
           </button>
-          <button type="button" onClick={() => dispatch({ type: 'RESET_GAME' })}>
+          <button type="button" className="btn-sub" onClick={() => dispatch({ type: 'RESET_GAME' })}>
             重置积分
           </button>
         </div>
       </header>
 
       <section className="board-meta">
-        <div>第 {state.round} 局</div>
-        <div>牌墙剩余：{state.wall.length}</div>
-        <div className="status">{statusText}</div>
+        <div className="meta-chip">第 {state.round} 局</div>
+        <div className="meta-chip">牌墙剩余：{state.wall.length}</div>
+        <div className="status meta-status">{statusText}</div>
       </section>
 
       <main className="table-grid">

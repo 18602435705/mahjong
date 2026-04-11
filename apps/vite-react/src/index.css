@@ -1,21 +1,39 @@
 :root {
-  --text: #294237;
-  --heading: #1a3025;
-  --muted-text: #60796d;
-  --panel-bg: rgba(244, 252, 247, 0.86);
-  --panel-border: rgba(43, 96, 69, 0.24);
-  --seat-bg: rgba(244, 250, 244, 0.94);
-  --seat-border: rgba(44, 95, 63, 0.3);
-  --btn-bg: #f8fff9;
-  --btn-bg-hover: #eaf7ed;
-  --btn-border: rgba(35, 102, 69, 0.28);
-  --btn-text: #244836;
-  font-family:
+  --text: #294438;
+  --heading: #183429;
+  --muted-text: #5e7a6d;
+
+  --felt-mid: #2f7754;
+  --felt-dark: #1b563b;
+  --gold: #ddb86f;
+
+  --panel-bg: linear-gradient(130deg, rgba(244, 252, 247, 0.88), rgba(229, 244, 235, 0.86));
+  --panel-border: rgba(36, 92, 63, 0.26);
+  --seat-border: rgba(42, 98, 67, 0.38);
+
+  --btn-bg: rgba(248, 255, 250, 0.95);
+  --btn-bg-hover: rgba(232, 246, 236, 0.95);
+  --btn-border: rgba(38, 106, 73, 0.34);
+  --btn-text: #244936;
+
+  --tile-bg-1: #f5eddc;
+  --tile-bg-2: #e6d8bf;
+  --tile-border: rgba(133, 104, 46, 0.42);
+
+  --font-ui:
     'Noto Sans SC',
     'PingFang SC',
     'Hiragino Sans GB',
     'Microsoft YaHei',
     sans-serif;
+  --font-title:
+    'Noto Serif SC',
+    'Source Han Serif SC',
+    'STSong',
+    'Songti SC',
+    serif;
+
+  font-family: var(--font-ui);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -29,9 +47,16 @@ body {
   margin: 0;
   min-height: 100svh;
   background:
-    radial-gradient(circle at 15% 15%, rgba(72, 146, 101, 0.2), transparent 35%),
-    radial-gradient(circle at 85% 85%, rgba(37, 85, 63, 0.18), transparent 38%),
-    linear-gradient(180deg, #d8efe0, #c8e4d2 60%, #c1ddcb);
+    radial-gradient(circle at 14% 12%, rgba(82, 156, 108, 0.22), transparent 34%),
+    radial-gradient(circle at 88% 78%, rgba(29, 75, 53, 0.2), transparent 40%),
+    repeating-linear-gradient(
+      -26deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.04) 2px,
+      transparent 2px,
+      transparent 14px
+    ),
+    linear-gradient(170deg, #d8ecde, #c1dbc9 62%, #b2cfbd);
   color: var(--text);
 }
 
