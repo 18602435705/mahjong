@@ -700,6 +700,25 @@ body,
   height: var(--side-discard-h);
 }
 
+.discard-flight-origin {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 560;
+}
+
+.discard-chip-floating .tile-asset--chip {
+  width: clamp(26px, calc(var(--chip-w) * 2.15), 56px);
+  height: clamp(36px, calc(var(--chip-h) * 2.15), 76px);
+  filter: drop-shadow(0 10px 16px rgba(18, 10, 4, 0.42));
+}
+
+.discard-chip-landing .tile-asset--chip {
+  filter: drop-shadow(0 2px 3px rgba(28, 15, 7, 0.35));
+}
+
 .action-float {
   position: fixed;
   right: calc(var(--pad) + env(safe-area-inset-right));

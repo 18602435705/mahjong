@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import "./App.css";
 import { installAudioUnlock, playActionVoice } from "./actionAudio";
 import TileAsset from "./TileAsset";
@@ -39,6 +40,8 @@ function detectMeldChange(prevState: GameState, nextState: GameState): Meld | nu
 }
 
 const VOICE_NUMBERS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
+const AI_DISCARD_DELAY_MS = 1500;
+const AI_RESPONSE_DELAY_MS = 1000;
 
 function tileToVoiceText(tile: Tile) {
   const suit = tile[0];
@@ -143,9 +146,12 @@ function App() {
       return;
     }
 
+    const aiDelay =
+      state.phase === "playerTurn" ? AI_DISCARD_DELAY_MS : AI_RESPONSE_DELAY_MS;
+
     const timer = window.setTimeout(() => {
       dispatch({ type: "AI_STEP" });
-    }, 560);
+    }, aiDelay);
 
     return () => {
       window.clearTimeout(timer);
@@ -613,9 +619,106 @@ type DiscardPoolProps = {
   wallCount: number;
 };
 
+type LaneKey = "top" | "left" | "right" | "bottom";
+
+type DiscardFlightState = {
+  layoutId: string;
+  tile: Tile;
+  playerIndex: number;
+  discardIndex: number;
+  phase: "center" | "travel";
+};
+
+const DISCARD_FLIGHT_HOLD_MS = 420;
+const DISCARD_FLIGHT_TOTAL_MS = 1080;
+
 function DiscardPool({ state, wallCount }: DiscardPoolProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const previousDiscardLengthsRef = useRef<number[] | null>(null);
+  const [flight, setFlight] = useState<DiscardFlightState | null>(null);
+
+  useLayoutEffect(() => {
+    const currentLengths = state.players.map((player) => player.discards.length);
+    const previousLengths = previousDiscardLengthsRef.current;
+
+    if (!previousLengths) {
+      previousDiscardLengthsRef.current = currentLengths;
+      return;
+    }
+
+    const hasReset = currentLengths.some(
+      (length, index) => length < previousLengths[index],
+    );
+    if (hasReset) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFlight(null);
+      previousDiscardLengthsRef.current = currentLengths;
+      return;
+    }
+
+    if (prefersReducedMotion) {
+      previousDiscardLengthsRef.current = currentLengths;
+      return;
+    }
+
+    let addedPlayer = -1;
+    for (let index = 0; index < currentLengths.length; index += 1) {
+      if (currentLengths[index] > previousLengths[index]) {
+        addedPlayer = index;
+        break;
+      }
+    }
+
+    if (addedPlayer >= 0) {
+      const discardIndex = currentLengths[addedPlayer] - 1;
+      const tile = state.players[addedPlayer].discards[discardIndex];
+      if (tile) {
+        setFlight({
+          layoutId: `discard-flight-${state.round}-${addedPlayer}-${discardIndex}-${tile}`,
+          tile,
+          playerIndex: addedPlayer,
+          discardIndex,
+          phase: "center",
+        });
+      }
+    }
+
+    previousDiscardLengthsRef.current = currentLengths;
+  }, [prefersReducedMotion, state]);
+
+  useEffect(() => {
+    if (!flight || flight.phase !== "center") {
+      return;
+    }
+
+    const holdTimer = window.setTimeout(() => {
+      setFlight((current) =>
+        current && current.layoutId === flight.layoutId
+          ? { ...current, phase: "travel" }
+          : current,
+      );
+    }, DISCARD_FLIGHT_HOLD_MS);
+
+    const cleanupTimer = window.setTimeout(() => {
+      setFlight((current) =>
+        current && current.layoutId === flight.layoutId ? null : current,
+      );
+    }, DISCARD_FLIGHT_TOTAL_MS);
+
+    return () => {
+      window.clearTimeout(holdTimer);
+      window.clearTimeout(cleanupTimer);
+    };
+  }, [flight]);
+
+  const isFlightTarget = (playerIndex: number, discardIndex: number, tile: Tile) =>
+    flight !== null &&
+    flight.playerIndex === playerIndex &&
+    flight.discardIndex === discardIndex &&
+    flight.tile === tile;
+
   const renderLane = (
-    key: "top" | "left" | "right" | "bottom",
+    key: LaneKey,
     playerIndex: number,
   ) => {
     const player = state.players[playerIndex];
@@ -629,14 +732,42 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
           {player.discards.length === 0 ? (
             <span className="muted">暂无弃牌</span>
           ) : (
-            player.discards.map((tile, idx) => (
-              <span
-                key={`${key}-${tile}-${idx}`}
-                className="tile chip discard-chip"
-              >
-                <TileAsset tile={tile} size="chip" />
-              </span>
-            ))
+            player.discards.map((tile, idx) => {
+              const isAnimatedTarget = isFlightTarget(playerIndex, idx, tile);
+
+              if (isAnimatedTarget && flight?.phase === "center") {
+                return null;
+              }
+
+              if (isAnimatedTarget && flight?.phase === "travel") {
+                return (
+                  <motion.span
+                    key={`${key}-${tile}-${idx}`}
+                    className="tile chip discard-chip discard-chip-landing"
+                    layoutId={flight.layoutId}
+                    transition={{
+                      layout: {
+                        type: "spring",
+                        stiffness: 520,
+                        damping: 40,
+                        mass: 0.9,
+                      },
+                    }}
+                  >
+                    <TileAsset tile={tile} size="chip" />
+                  </motion.span>
+                );
+              }
+
+              return (
+                <span
+                  key={`${key}-${tile}-${idx}`}
+                  className="tile chip discard-chip"
+                >
+                  <TileAsset tile={tile} size="chip" />
+                </span>
+              );
+            })
           )}
         </div>
       </section>
@@ -644,20 +775,36 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
   };
 
   return (
-    <section className="discard-pool" aria-label="中间弃牌区">
-      {renderLane("top", 2)}
-      {renderLane("left", 3)}
-      <section
-        className="discard-center"
-        aria-live="polite"
-        aria-label="牌墙剩余"
-      >
-        <span className="discard-center-label">牌墙剩余</span>
-        <strong className="discard-center-value">{wallCount}</strong>
+    <LayoutGroup id="discard-flight-group">
+      <section className="discard-pool" aria-label="中间弃牌区">
+        {renderLane("top", 2)}
+        {renderLane("left", 3)}
+        <section
+          className="discard-center"
+          aria-live="polite"
+          aria-label="牌墙剩余"
+        >
+          <span className="discard-center-label">牌墙剩余</span>
+          <strong className="discard-center-value">{wallCount}</strong>
+        </section>
+        {renderLane("right", 1)}
+        {renderLane("bottom", 0)}
       </section>
-      {renderLane("right", 1)}
-      {renderLane("bottom", 0)}
-    </section>
+
+      {flight?.phase === "center" && (
+        <div className="discard-flight-origin" aria-hidden="true">
+          <motion.span
+            className="tile chip discard-chip discard-chip-floating"
+            layoutId={flight.layoutId}
+            initial={{ opacity: 0, scale: 0.76, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            <TileAsset tile={flight.tile} size="chip" />
+          </motion.span>
+        </div>
+      )}
+    </LayoutGroup>
   );
 }
 
