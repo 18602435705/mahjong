@@ -142,16 +142,16 @@ export const getCurrentQiangGangCandidate = (
 export const getHumanTurnOptions = (state: GameState) => {
   const human = state.players[0];
   const canAct = state.phase === "playerTurn" && state.currentPlayer === 0;
-  const handLength = human.hand.length;
-  const drawState = handLength % 3 === 2;
+  const canUseDrawActions =
+    canAct && human.justDrawnTile !== null && human.hand.length % 3 === 2;
   const selfHu =
-    canAct && drawState ? evaluateHu(human.hand, human.melds) : null;
+    canUseDrawActions ? evaluateHu(human.hand, human.melds) : null;
 
   return {
     canDiscard: canAct,
     selfHu,
-    anGangTiles: canAct && drawState ? getAnGangOptions(human) : [],
-    buGangTiles: canAct && drawState ? getBuGangOptions(human) : [],
+    anGangTiles: canUseDrawActions ? getAnGangOptions(human) : [],
+    buGangTiles: canUseDrawActions ? getBuGangOptions(human) : [],
   };
 };
 
@@ -259,17 +259,19 @@ function runAIStep(state: GameState): GameState {
     return state;
   }
 
-  const selfHu = evaluateHu(player.hand, player.melds);
-  if (selfHu && player.hand.length % 3 === 2) {
-    return settleHu(state, {
-      winner: actor,
-      method: "zimo",
-      tile: player.hand[player.hand.length - 1],
-      hu: selfHu,
-    });
-  }
+  const canUseDrawActions =
+    player.justDrawnTile !== null && player.hand.length % 3 === 2;
+  if (canUseDrawActions) {
+    const selfHu = evaluateHu(player.hand, player.melds);
+    if (selfHu) {
+      return settleHu(state, {
+        winner: actor,
+        method: "zimo",
+        tile: player.hand[player.hand.length - 1],
+        hu: selfHu,
+      });
+    }
 
-  if (player.hand.length % 3 === 2) {
     const buGangTiles = getBuGangOptions(player);
     if (buGangTiles.length > 0) {
       return tryBuGang(state, actor, buGangTiles[0]);
@@ -498,7 +500,7 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
 
 function trySelfHu(baseState: GameState, actor: number): GameState {
   const player = baseState.players[actor];
-  if (player.hand.length % 3 !== 2) {
+  if (player.justDrawnTile === null || player.hand.length % 3 !== 2) {
     return baseState;
   }
 
@@ -523,7 +525,11 @@ function tryAnGang(baseState: GameState, actor: number, tile: Tile): GameState {
     return baseState;
   }
 
-  if (countTile(player.hand, tile) < 4 || player.hand.length % 3 !== 2) {
+  if (
+    player.justDrawnTile === null ||
+    countTile(player.hand, tile) < 4 ||
+    player.hand.length % 3 !== 2
+  ) {
     return baseState;
   }
 
@@ -546,6 +552,7 @@ function tryBuGang(baseState: GameState, actor: number, tile: Tile): GameState {
 
   const player = baseState.players[actor];
   const canBuGang =
+    player.justDrawnTile !== null &&
     player.hand.length % 3 === 2 &&
     player.melds.some((meld) => meld.type === "peng" && meld.tile === tile) &&
     countTile(player.hand, tile) >= 1;

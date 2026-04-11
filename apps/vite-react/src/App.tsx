@@ -224,7 +224,7 @@ function App() {
   const statusText = useMemo(() => {
     if (state.phase === "gameOver") {
       if (!state.winInfo) {
-        return "本局结束：流局（无流局结算）";
+        return "本局结束：流局";
       }
 
       const winner = state.players[state.winInfo.winner].name;
@@ -393,16 +393,17 @@ function App() {
                 <div className="action-buttons">
                   {humanOptions.selfHu && (
                     <button
+                      className="action-btn action-btn-hu"
                       type="button"
                       onClick={() => dispatch({ type: "HUMAN_SELF_HU" })}
                     >
-                      自摸（{huTypeText(humanOptions.selfHu.type)}{" "}
-                      {humanOptions.selfHu.baseFan} 番）
+                      {`自摸（${huTypeText(humanOptions.selfHu.type)})`}
                     </button>
                   )}
                   {humanOptions.anGangTiles.map((tile) => (
                     <button
                       key={`angang-${tile}`}
+                      className="action-btn action-btn-gang"
                       type="button"
                       onClick={() =>
                         dispatch({
@@ -427,6 +428,7 @@ function App() {
                   {humanOptions.buGangTiles.map((tile) => (
                     <button
                       key={`bugang-${tile}`}
+                      className="action-btn action-btn-gang"
                       type="button"
                       onClick={() =>
                         dispatch({
@@ -465,6 +467,13 @@ function App() {
                 </p>
                 <div className="action-buttons">
                   <button
+                    className={`action-btn ${
+                      currentClaim.action === "hu"
+                        ? "action-btn-hu"
+                        : currentClaim.action === "mingGang"
+                          ? "action-btn-gang"
+                          : "action-btn-peng"
+                    }`}
                     type="button"
                     onClick={() =>
                       dispatch({
@@ -489,6 +498,7 @@ function App() {
                     </span>
                   </button>
                   <button
+                    className="action-btn action-btn-pass"
                     type="button"
                     onClick={() =>
                       dispatch({
@@ -510,6 +520,7 @@ function App() {
                   <p>你可抢杠胡：{tileToText(state.qiangGang.tile)}</p>
                   <div className="action-buttons">
                     <button
+                      className="action-btn action-btn-hu"
                       type="button"
                       onClick={() =>
                         dispatch({
@@ -528,6 +539,7 @@ function App() {
                       </span>
                     </button>
                     <button
+                      className="action-btn action-btn-pass"
                       type="button"
                       onClick={() =>
                         dispatch({
