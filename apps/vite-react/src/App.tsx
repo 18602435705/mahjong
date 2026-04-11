@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import "./App.css";
+import { installAudioUnlock, playActionVoice } from "./actionAudio";
+import TileAsset from "./TileAsset";
 import {
   createInitialGameState,
   gameReducer,
@@ -9,8 +11,93 @@ import {
   huTypeText,
   meldTypeText,
   tileToText,
+  type GameState,
+  type Meld,
   type Tile,
 } from "./mahjongEngine";
+
+function detectMeldChange(prevState: GameState, nextState: GameState): Meld | null {
+  for (let index = 0; index < nextState.players.length; index += 1) {
+    const prevMelds = prevState.players[index].melds;
+    const nextMelds = nextState.players[index].melds;
+
+    for (let meldIndex = 0; meldIndex < nextMelds.length; meldIndex += 1) {
+      const nextMeld = nextMelds[meldIndex];
+      const prevMeld = prevMelds[meldIndex];
+
+      if (!prevMeld) {
+        return nextMeld;
+      }
+
+      if (prevMeld.type !== nextMeld.type || prevMeld.tile !== nextMeld.tile) {
+        return nextMeld;
+      }
+    }
+  }
+
+  return null;
+}
+
+const VOICE_NUMBERS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
+
+function tileToVoiceText(tile: Tile) {
+  const suit = tile[0];
+  const rank = Number(tile.slice(1));
+  const numberText = VOICE_NUMBERS[rank - 1] ?? `${rank}`;
+  const suitText = suit === "W" ? "万" : suit === "T" ? "条" : "筒";
+  return `${numberText}${suitText}`;
+}
+
+function detectDiscardedTile(prevState: GameState, nextState: GameState): Tile | null {
+  for (let index = 0; index < nextState.players.length; index += 1) {
+    const prevDiscards = prevState.players[index].discards;
+    const nextDiscards = nextState.players[index].discards;
+    if (nextDiscards.length > prevDiscards.length) {
+      return nextDiscards[nextDiscards.length - 1] ?? null;
+    }
+  }
+
+  return null;
+}
+
+function detectActionVoice(prevState: GameState, nextState: GameState) {
+  if (prevState.round !== nextState.round) {
+    return null;
+  }
+
+  if (!prevState.winInfo && nextState.winInfo) {
+    const tileText = tileToVoiceText(nextState.winInfo.tile);
+    if (nextState.winInfo.method === "zimo") {
+      return `自摸 ${tileText}`;
+    }
+    if (nextState.winInfo.method === "qianggang") {
+      return `抢杠胡 ${tileText}`;
+    }
+    return `胡 ${tileText}`;
+  }
+
+  const meld = detectMeldChange(prevState, nextState);
+  if (meld) {
+    const tileText = tileToVoiceText(meld.tile);
+    if (meld.type === "peng") {
+      return `碰 ${tileText}`;
+    }
+    if (meld.type === "mingGang") {
+      return `明杠 ${tileText}`;
+    }
+    if (meld.type === "anGang") {
+      return "暗杠";
+    }
+    return `补杠 ${tileText}`;
+  }
+
+  const discarded = detectDiscardedTile(prevState, nextState);
+  if (discarded) {
+    return tileToVoiceText(discarded);
+  }
+
+  return null;
+}
 
 function App() {
   const [state, dispatch] = useReducer(
@@ -18,6 +105,13 @@ function App() {
     undefined,
     createInitialGameState,
   );
+  const menuRef = useRef<HTMLDetailsElement | null>(null);
+  const previousStateRef = useRef<GameState | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedDiscard, setSelectedDiscard] = useState<{
+    key: string;
+    handSignature: string;
+  } | null>(null);
 
   const humanOptions = useMemo(() => getHumanTurnOptions(state), [state]);
   const currentClaim = useMemo(() => getCurrentClaim(state), [state]);
@@ -25,6 +119,10 @@ function App() {
     () => getCurrentQiangGangCandidate(state),
     [state],
   );
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
 
   useEffect(() => {
     if (state.phase === "gameOver") {
@@ -53,6 +151,51 @@ function App() {
       window.clearTimeout(timer);
     };
   }, [state, currentClaim, qiangGangCandidate]);
+
+  useEffect(() => {
+    const previous = previousStateRef.current;
+    if (previous) {
+      const voice = detectActionVoice(previous, state);
+      if (voice) {
+        playActionVoice(voice);
+      }
+    }
+
+    previousStateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (menuRef.current?.contains(target)) {
+        return;
+      }
+
+      setMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
 
   const statusText = useMemo(() => {
     if (state.phase === "gameOver") {
@@ -102,37 +245,78 @@ function App() {
     return `当前行动：${current}`;
   }, [state, currentClaim, qiangGangCandidate]);
 
+  const humanHandSignature = state.players[0].hand.join("|");
+
+  const activeSelectedDiscardKey =
+    humanOptions.canDiscard &&
+    selectedDiscard?.handSignature === humanHandSignature
+      ? selectedDiscard.key
+      : null;
+  const isHumanActionPending =
+    (state.phase === "playerTurn" && state.currentPlayer === 0) ||
+    (state.phase === "claimDecision" && currentClaim?.player === 0) ||
+    (state.phase === "qiangGangDecision" && qiangGangCandidate === 0);
+
+  const handleHumanTileClick = (tile: Tile, index: number) => {
+    if (!humanOptions.canDiscard) {
+      return;
+    }
+
+    const key = `${tile}-${index}`;
+    if (activeSelectedDiscardKey === key) {
+      dispatch({ type: "HUMAN_DISCARD", tile });
+      setSelectedDiscard(null);
+      return;
+    }
+
+    setSelectedDiscard({
+      key,
+      handSignature: humanHandSignature,
+    });
+  };
+
   return (
     <div className="mahjong-app">
-      <header className="topbar">
-        <div className="topbar-title">
-          <h1>川麻单机局</h1>
-          <p className="subtitle">
-            规则：可碰可杠不可吃｜禁止点炮（仅自摸/抢杠胡）｜无换三张｜无定缺｜非血战｜无流局结算
-          </p>
-        </div>
-        <div className="round-actions">
-          <button
-            type="button"
-            className="btn-main"
-            onClick={() => dispatch({ type: "NEXT_ROUND" })}
-          >
-            再来一局
-          </button>
-          <button
-            type="button"
-            className="btn-sub"
-            onClick={() => dispatch({ type: "RESET_GAME" })}
-          >
-            重置积分
-          </button>
-        </div>
-      </header>
-
       <section className="board-meta">
+        <details ref={menuRef} className="fab-menu" open={menuOpen}>
+          <summary
+            className="menu-trigger"
+            aria-label={menuOpen ? "关闭菜单" : "打开菜单"}
+            aria-expanded={menuOpen}
+            onClick={(event) => {
+              event.preventDefault();
+              setMenuOpen((current) => !current);
+            }}
+          >
+            ☰
+          </summary>
+          <div className="menu-panel">
+            <button
+              type="button"
+              className="menu-item btn-main"
+              onClick={() => {
+                dispatch({ type: "NEXT_ROUND" });
+                setMenuOpen(false);
+              }}
+            >
+              再来一局
+            </button>
+            <button
+              type="button"
+              className="menu-item btn-sub"
+              onClick={() => {
+                dispatch({ type: "RESET_GAME" });
+                setMenuOpen(false);
+              }}
+            >
+              重置积分
+            </button>
+          </div>
+        </details>
         <div className="meta-chip">第 {state.round} 局</div>
-        <div className="meta-chip">牌墙剩余：{state.wall.length}</div>
-        <div className="status meta-status">{statusText}</div>
+        <div className="meta-status" aria-live="polite">
+          {statusText}
+        </div>
       </section>
 
       <main className="table-grid">
@@ -152,11 +336,36 @@ function App() {
         />
 
         <section className="center-panel">
-          <div className="action-panel">
-            <h2>操作区</h2>
+          <DiscardPool state={state} wallCount={state.wall.length} />
+        </section>
+
+        <PlayerSeat
+          title={state.players[1].name}
+          playerIndex={1}
+          state={state}
+          showHand={false}
+          seatClass="seat-right"
+        />
+
+        <PlayerSeat
+          title={state.players[0].name}
+          playerIndex={0}
+          state={state}
+          showHand
+          seatClass="seat-bottom"
+          onTileClick={handleHumanTileClick}
+          canDiscard={humanOptions.canDiscard}
+          selectedTileKey={activeSelectedDiscardKey}
+        />
+      </main>
+
+      {isHumanActionPending && (
+        <section className="action-float" aria-live="polite">
+          <div className="action-panel action-panel-floating">
+            <h2>操作</h2>
             {state.phase === "playerTurn" && state.currentPlayer === 0 && (
               <>
-                <p>点击下方手牌出牌</p>
+                <p>双击出牌</p>
                 <div className="action-buttons">
                   {humanOptions.selfHu && (
                     <button
@@ -216,7 +425,10 @@ function App() {
                   <button
                     type="button"
                     onClick={() =>
-                      dispatch({ type: "HUMAN_CLAIM_DECISION", accept: true })
+                      dispatch({
+                        type: "HUMAN_CLAIM_DECISION",
+                        accept: true,
+                      })
                     }
                   >
                     执行
@@ -224,7 +436,10 @@ function App() {
                   <button
                     type="button"
                     onClick={() =>
-                      dispatch({ type: "HUMAN_CLAIM_DECISION", accept: false })
+                      dispatch({
+                        type: "HUMAN_CLAIM_DECISION",
+                        accept: false,
+                      })
                     }
                   >
                     过
@@ -264,42 +479,9 @@ function App() {
                   </div>
                 </>
               )}
-
-            {!(
-              (state.phase === "playerTurn" && state.currentPlayer === 0) ||
-              (state.phase === "claimDecision" && currentClaim?.player === 0) ||
-              (state.phase === "qiangGangDecision" && qiangGangCandidate === 0)
-            ) && <p>等待 AI 操作中...</p>}
-          </div>
-
-          <div className="log-panel">
-            <h2>对局日志</h2>
-            <ul>
-              {state.logs.map((log, index) => (
-                <li key={`${log}-${index}`}>{log}</li>
-              ))}
-            </ul>
           </div>
         </section>
-
-        <PlayerSeat
-          title={state.players[1].name}
-          playerIndex={1}
-          state={state}
-          showHand={false}
-          seatClass="seat-right"
-        />
-
-        <PlayerSeat
-          title={state.players[0].name}
-          playerIndex={0}
-          state={state}
-          showHand
-          seatClass="seat-bottom"
-          onDiscard={(tile) => dispatch({ type: "HUMAN_DISCARD", tile })}
-          canDiscard={humanOptions.canDiscard}
-        />
-      </main>
+      )}
     </div>
   );
 }
@@ -311,7 +493,8 @@ type PlayerSeatProps = {
   state: ReturnType<typeof createInitialGameState>;
   showHand: boolean;
   canDiscard?: boolean;
-  onDiscard?: (tile: Tile) => void;
+  selectedTileKey?: string | null;
+  onTileClick?: (tile: Tile, index: number) => void;
 };
 
 function PlayerSeat(props: PlayerSeatProps) {
@@ -322,11 +505,29 @@ function PlayerSeat(props: PlayerSeatProps) {
     state,
     showHand,
     canDiscard = false,
-    onDiscard,
+    selectedTileKey = null,
+    onTileClick,
   } = props;
   const player = state.players[playerIndex];
   const isCurrent =
     state.currentPlayer === playerIndex && state.phase === "playerTurn";
+  const handEntries = player.hand.map((tile, index) => ({ tile, index }));
+
+  let drawnEntryIndex = -1;
+  if (showHand && canDiscard && player.justDrawnTile) {
+    for (let i = handEntries.length - 1; i >= 0; i -= 1) {
+      if (handEntries[i].tile === player.justDrawnTile) {
+        drawnEntryIndex = i;
+        break;
+      }
+    }
+  }
+
+  const drawnEntry = drawnEntryIndex >= 0 ? handEntries[drawnEntryIndex] : null;
+  const normalHandEntries =
+    drawnEntryIndex >= 0
+      ? handEntries.filter((_, index) => index !== drawnEntryIndex)
+      : handEntries;
 
   return (
     <section className={`seat ${seatClass} ${isCurrent ? "current" : ""}`}>
@@ -336,59 +537,128 @@ function PlayerSeat(props: PlayerSeatProps) {
         {!showHand && <span>手牌：{player.hand.length} 张</span>}
       </header>
 
-      <div className="melds">
-        {player.melds.length === 0 ? (
-          <span className="muted">暂无副露</span>
-        ) : (
-          player.melds.map((meld, idx) => (
-            <span
-              key={`${meld.type}-${meld.tile}-${idx}`}
-              className="meld-item"
-            >
-              {meldTypeText(meld.type)} {tileToText(meld.tile)}
-            </span>
-          ))
-        )}
-      </div>
-
-      <div className="discards">
-        {player.discards.length === 0 ? (
-          <span className="muted">未出牌</span>
-        ) : (
-          player.discards.map((tile, idx) => (
-            <span
-              key={`${tile}-${idx}`}
-              className={`tile chip ${tileClass(tile)}`}
-            >
-              {tileToText(tile)}
-            </span>
-          ))
-        )}
-      </div>
-
-      {showHand && (
-        <div className="hand-row">
-          {player.hand.map((tile, idx) => (
-            <button
-              key={`${tile}-${idx}`}
-              type="button"
-              className={`tile hand ${tileClass(tile)}`}
-              disabled={!canDiscard}
-              onClick={() => onDiscard?.(tile)}
-            >
-              {tileToText(tile)}
-            </button>
-          ))}
+      <div
+        className={`seat-main-row ${showHand ? "seat-main-row-human" : "seat-main-row-ai"}`}
+      >
+        <div className="melds">
+          {player.melds.length === 0 ? (
+            <span className="muted">暂无副露</span>
+          ) : (
+            player.melds.map((meld, idx) => (
+              <span
+                key={`${meld.type}-${meld.tile}-${idx}`}
+                className="meld-item"
+              >
+                <span className="meld-label">{meldTypeText(meld.type)}</span>
+                <TileAsset tile={meld.tile} size="meld" />
+              </span>
+            ))
+          )}
         </div>
-      )}
+
+        {!showHand && (
+          <div className="hidden-hand-row" aria-label={`${title} 手牌（背面）`}>
+            {player.hand.map((_, index) => (
+              <span
+                key={`hidden-${playerIndex}-${index}`}
+                className="tile hidden-hand-tile"
+              >
+                <TileAsset size="chip" face="back" />
+              </span>
+            ))}
+          </div>
+        )}
+
+        {showHand && (
+          <div className="hand-row">
+            {normalHandEntries.map(({ tile, index }) => (
+              <button
+                key={`${tile}-${index}`}
+                type="button"
+                className={`tile hand ${selectedTileKey === `${tile}-${index}` ? "selected" : ""}`}
+                disabled={!canDiscard}
+                onClick={() => onTileClick?.(tile, index)}
+                aria-label={`打出 ${tileToText(tile)}`}
+              >
+                <TileAsset tile={tile} size="hand" />
+              </button>
+            ))}
+
+            {drawnEntry !== null && (
+              <>
+                <span className="drawn-separator" aria-hidden="true" />
+                <button
+                  key={`drawn-${drawnEntry.tile}-${drawnEntry.index}`}
+                  type="button"
+                  className={`tile hand drawn ${selectedTileKey === `${drawnEntry.tile}-${drawnEntry.index}` ? "selected" : ""}`}
+                  disabled={!canDiscard}
+                  onClick={() =>
+                    onTileClick?.(drawnEntry.tile, drawnEntry.index)
+                  }
+                  aria-label={`打出 ${tileToText(drawnEntry.tile)}（摸到）`}
+                >
+                  <TileAsset tile={drawnEntry.tile} size="hand" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
-function tileClass(tile: Tile) {
-  if (tile.startsWith("W")) return "wan";
-  if (tile.startsWith("T")) return "tiao";
-  return "tong";
+type DiscardPoolProps = {
+  state: ReturnType<typeof createInitialGameState>;
+  wallCount: number;
+};
+
+function DiscardPool({ state, wallCount }: DiscardPoolProps) {
+  const renderLane = (
+    key: "top" | "left" | "right" | "bottom",
+    playerIndex: number,
+  ) => {
+    const player = state.players[playerIndex];
+    return (
+      <section
+        key={key}
+        className={`discard-lane discard-lane-${key}`}
+        aria-label={`${player.name} 的弃牌`}
+      >
+        <div className="discard-tiles">
+          {player.discards.length === 0 ? (
+            <span className="muted">暂无弃牌</span>
+          ) : (
+            player.discards.map((tile, idx) => (
+              <span
+                key={`${key}-${tile}-${idx}`}
+                className="tile chip discard-chip"
+              >
+                <TileAsset tile={tile} size="chip" />
+              </span>
+            ))
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  return (
+    <section className="discard-pool" aria-label="中间弃牌区">
+      {renderLane("top", 2)}
+      {renderLane("left", 3)}
+      <section
+        className="discard-center"
+        aria-live="polite"
+        aria-label="牌墙剩余"
+      >
+        <span className="discard-center-label">牌墙剩余</span>
+        <strong className="discard-center-value">{wallCount}</strong>
+      </section>
+      {renderLane("right", 1)}
+      {renderLane("bottom", 0)}
+    </section>
+  );
 }
 
 export default App;

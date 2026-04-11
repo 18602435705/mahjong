@@ -14,6 +14,7 @@ export interface PlayerState {
   name: string;
   isHuman: boolean;
   hand: Tile[];
+  justDrawnTile: Tile | null;
   melds: Meld[];
   discards: Tile[];
   score: number;
@@ -295,6 +296,7 @@ function createRoundState(scores: number[], round: number): GameState {
     name: PLAYER_NAMES[index],
     isHuman: index === 0,
     hand: [],
+    justDrawnTile: null,
     melds: [],
     discards: [],
     score: scores[index] ?? 0,
@@ -368,6 +370,7 @@ function discardTile(
   }
 
   player.discards.push(tile);
+  player.justDrawnTile = null;
   sortTiles(player.hand);
   state.lastDiscard = { tile, from: actor };
   appendLog(state, `${player.name} 打出 ${tileToText(tile)}`);
@@ -731,6 +734,10 @@ function enterTurn(
   shouldDraw: boolean,
 ): GameState {
   const state = cloneState(baseState);
+  for (const player of state.players) {
+    player.justDrawnTile = null;
+  }
+
   state.currentPlayer = playerIndex;
   state.phase = "playerTurn";
   state.pendingClaims = [];
@@ -752,6 +759,7 @@ function enterTurn(
 
   const player = state.players[playerIndex];
   player.hand.push(drawn);
+  player.justDrawnTile = drawn;
   sortTiles(player.hand);
   appendLog(state, `${player.name} 摸牌`);
 
