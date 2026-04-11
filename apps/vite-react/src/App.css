@@ -18,7 +18,11 @@
   gap: 18px;
   padding: 14px 16px;
   border: 1px solid var(--panel-border);
-  background: linear-gradient(145deg, rgba(250, 255, 252, 0.9), rgba(236, 248, 240, 0.78));
+  background: linear-gradient(
+    145deg,
+    rgba(250, 255, 252, 0.9),
+    rgba(236, 248, 240, 0.78)
+  );
   border-radius: 16px;
   box-shadow: 0 12px 28px rgba(14, 40, 28, 0.12);
   backdrop-filter: blur(5px);
@@ -56,7 +60,10 @@
   font-weight: 600;
   padding: 8px 14px;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.22s ease, filter 0.2s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    filter 0.2s ease;
 }
 
 .round-actions button:hover,
@@ -106,7 +113,11 @@
   border-radius: 999px;
   font-size: 0.84rem;
   color: #335448;
-  background: linear-gradient(130deg, rgba(255, 255, 255, 0.9), rgba(225, 241, 233, 0.92));
+  background: linear-gradient(
+    130deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(225, 241, 233, 0.92)
+  );
   border: 1px solid rgba(36, 92, 64, 0.26);
 }
 
@@ -121,18 +132,28 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(168px, 1fr) minmax(340px, 1.6fr) minmax(168px, 1fr);
-  grid-template-rows: minmax(130px, auto) minmax(290px, auto) minmax(164px, auto);
+  grid-template-columns: minmax(168px, 1fr) minmax(340px, 1.6fr) minmax(
+      168px,
+      1fr
+    );
+  grid-template-rows: minmax(130px, auto) minmax(290px, auto) minmax(
+      164px,
+      auto
+    );
   grid-template-areas:
-    '. top .'
-    'left center right'
-    '. bottom .';
+    ". top ."
+    "left center right"
+    ". bottom .";
   gap: 12px;
   padding: 16px;
   border-radius: 20px;
   border: 1px solid rgba(24, 62, 43, 0.52);
   background:
-    radial-gradient(circle at 45% 52%, rgba(246, 222, 164, 0.12), transparent 35%),
+    radial-gradient(
+      circle at 45% 52%,
+      rgba(246, 222, 164, 0.12),
+      transparent 35%
+    ),
     linear-gradient(160deg, var(--felt-mid), var(--felt-dark) 72%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.26),
@@ -143,11 +164,15 @@
 }
 
 .table-grid::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.11), transparent 28%),
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(255, 255, 255, 0.11),
+      transparent 28%
+    ),
     repeating-linear-gradient(
       32deg,
       rgba(255, 255, 255, 0.04),
@@ -159,7 +184,7 @@
 }
 
 .table-grid::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 50%;
   width: 260px;
@@ -178,7 +203,11 @@
   z-index: 1;
   border-radius: 14px;
   border: 1px solid var(--seat-border);
-  background: linear-gradient(155deg, rgba(252, 255, 253, 0.95), rgba(240, 250, 244, 0.88));
+  background: linear-gradient(
+    155deg,
+    rgba(252, 255, 253, 0.95),
+    rgba(240, 250, 244, 0.88)
+  );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
     0 10px 18px rgba(8, 38, 24, 0.16);
@@ -196,7 +225,9 @@
     inset 0 0 0 1px rgba(255, 239, 198, 0.72),
     0 0 0 2px rgba(239, 203, 119, 0.28),
     0 12px 26px rgba(8, 35, 24, 0.2);
-  animation: seat-in 0.55s ease-out both, current-pulse 2.3s ease-in-out infinite;
+  animation:
+    seat-in 0.55s ease-out both,
+    current-pulse 2.3s ease-in-out infinite;
 }
 
 .seat-top {
@@ -254,7 +285,11 @@
   border-radius: 8px;
   padding: 2px 8px;
   font-size: 0.8rem;
-  background: linear-gradient(145deg, rgba(255, 247, 222, 0.92), rgba(246, 230, 189, 0.82));
+  background: linear-gradient(
+    145deg,
+    rgba(255, 247, 222, 0.92),
+    rgba(246, 230, 189, 0.82)
+  );
 }
 
 .tile {
@@ -281,7 +316,7 @@
 }
 
 .tile::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 1px;
   border-radius: 7px;
@@ -303,7 +338,10 @@
 
 .tile.hand {
   cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .tile.hand:hover:not(:disabled) {
@@ -344,7 +382,11 @@
 .log-panel {
   border-radius: 14px;
   border: 1px solid rgba(16, 65, 40, 0.34);
-  background: linear-gradient(160deg, rgba(253, 252, 244, 0.95), rgba(238, 246, 236, 0.88));
+  background: linear-gradient(
+    160deg,
+    rgba(253, 252, 244, 0.95),
+    rgba(238, 246, 236, 0.88)
+  );
   padding: 11px;
   box-shadow: 0 8px 18px rgba(12, 43, 30, 0.14);
 }
@@ -372,7 +414,11 @@
 }
 
 .action-buttons button {
-  background: linear-gradient(145deg, rgba(251, 255, 252, 0.96), rgba(233, 246, 238, 0.95));
+  background: linear-gradient(
+    145deg,
+    rgba(251, 255, 252, 0.96),
+    rgba(233, 246, 238, 0.95)
+  );
   color: #284736;
 }
 
@@ -391,7 +437,11 @@
 .log-panel li {
   border-radius: 8px;
   padding: 5px 8px;
-  background: linear-gradient(150deg, rgba(245, 251, 247, 0.96), rgba(232, 245, 236, 0.9));
+  background: linear-gradient(
+    150deg,
+    rgba(245, 251, 247, 0.96),
+    rgba(232, 245, 236, 0.9)
+  );
   border-left: 3px solid rgba(137, 177, 152, 0.75);
   animation: log-in 0.35s ease-out both;
 }
@@ -434,7 +484,11 @@
 
 .log-panel ul::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(115, 159, 132, 0.9), rgba(64, 118, 90, 0.82));
+  background: linear-gradient(
+    180deg,
+    rgba(115, 159, 132, 0.9),
+    rgba(64, 118, 90, 0.82)
+  );
 }
 
 .log-panel ul::-webkit-scrollbar-track {
@@ -523,11 +577,11 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto;
     grid-template-areas:
-      'top'
-      'left'
-      'center'
-      'right'
-      'bottom';
+      "top"
+      "left"
+      "center"
+      "right"
+      "bottom";
   }
 
   .table-grid::after {

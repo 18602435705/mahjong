@@ -7,7 +7,11 @@
   --felt-dark: #1b563b;
   --gold: #ddb86f;
 
-  --panel-bg: linear-gradient(130deg, rgba(244, 252, 247, 0.88), rgba(229, 244, 235, 0.86));
+  --panel-bg: linear-gradient(
+    130deg,
+    rgba(244, 252, 247, 0.88),
+    rgba(229, 244, 235, 0.86)
+  );
   --panel-border: rgba(36, 92, 63, 0.26);
   --seat-border: rgba(42, 98, 67, 0.38);
 
@@ -21,17 +25,10 @@
   --tile-border: rgba(133, 104, 46, 0.42);
 
   --font-ui:
-    'Noto Sans SC',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
+    "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
     sans-serif;
   --font-title:
-    'Noto Serif SC',
-    'Source Han Serif SC',
-    'STSong',
-    'Songti SC',
-    serif;
+    "Noto Serif SC", "Source Han Serif SC", "STSong", "Songti SC", serif;
 
   font-family: var(--font-ui);
   text-rendering: optimizeLegibility;
@@ -47,7 +44,11 @@ body {
   margin: 0;
   min-height: 100svh;
   background:
-    radial-gradient(circle at 14% 12%, rgba(82, 156, 108, 0.22), transparent 34%),
+    radial-gradient(
+      circle at 14% 12%,
+      rgba(82, 156, 108, 0.22),
+      transparent 34%
+    ),
     radial-gradient(circle at 88% 78%, rgba(29, 75, 53, 0.2), transparent 40%),
     repeating-linear-gradient(
       -26deg,

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useReducer } from 'react'
-import './App.css'
+import { useEffect, useMemo, useReducer } from "react";
+import "./App.css";
 import {
   createInitialGameState,
   gameReducer,
@@ -10,87 +10,97 @@ import {
   meldTypeText,
   tileToText,
   type Tile,
-} from './mahjongEngine'
+} from "./mahjongEngine";
 
 function App() {
-  const [state, dispatch] = useReducer(gameReducer, undefined, createInitialGameState)
+  const [state, dispatch] = useReducer(
+    gameReducer,
+    undefined,
+    createInitialGameState,
+  );
 
-  const humanOptions = useMemo(() => getHumanTurnOptions(state), [state])
-  const currentClaim = useMemo(() => getCurrentClaim(state), [state])
-  const qiangGangCandidate = useMemo(() => getCurrentQiangGangCandidate(state), [state])
+  const humanOptions = useMemo(() => getHumanTurnOptions(state), [state]);
+  const currentClaim = useMemo(() => getCurrentClaim(state), [state]);
+  const qiangGangCandidate = useMemo(
+    () => getCurrentQiangGangCandidate(state),
+    [state],
+  );
 
   useEffect(() => {
-    if (state.phase === 'gameOver') {
-      return
+    if (state.phase === "gameOver") {
+      return;
     }
 
     const shouldRunAI =
-      (state.phase === 'playerTurn' && !state.players[state.currentPlayer].isHuman) ||
-      (state.phase === 'claimDecision' &&
+      (state.phase === "playerTurn" &&
+        !state.players[state.currentPlayer].isHuman) ||
+      (state.phase === "claimDecision" &&
         currentClaim !== null &&
         !state.players[currentClaim.player].isHuman) ||
-      (state.phase === 'qiangGangDecision' &&
+      (state.phase === "qiangGangDecision" &&
         qiangGangCandidate !== null &&
-        !state.players[qiangGangCandidate].isHuman)
+        !state.players[qiangGangCandidate].isHuman);
 
     if (!shouldRunAI) {
-      return
+      return;
     }
 
     const timer = window.setTimeout(() => {
-      dispatch({ type: 'AI_STEP' })
-    }, 560)
+      dispatch({ type: "AI_STEP" });
+    }, 560);
 
     return () => {
-      window.clearTimeout(timer)
-    }
-  }, [state, currentClaim, qiangGangCandidate])
+      window.clearTimeout(timer);
+    };
+  }, [state, currentClaim, qiangGangCandidate]);
 
   const statusText = useMemo(() => {
-    if (state.phase === 'gameOver') {
+    if (state.phase === "gameOver") {
       if (!state.winInfo) {
-        return '本局结束：流局（无流局结算）'
+        return "本局结束：流局（无流局结算）";
       }
 
-      const winner = state.players[state.winInfo.winner].name
+      const winner = state.players[state.winInfo.winner].name;
       const methodText =
-        state.winInfo.method === 'zimo'
-          ? '自摸'
-          : state.winInfo.method === 'qianggang'
-            ? '抢杠胡'
-            : '点炮胡'
+        state.winInfo.method === "zimo"
+          ? "自摸"
+          : state.winInfo.method === "qianggang"
+            ? "抢杠胡"
+            : "点炮胡";
       const payer =
-        typeof state.winInfo.from === 'number'
+        typeof state.winInfo.from === "number"
           ? `，由 ${state.players[state.winInfo.from].name} 付分`
-          : ''
+          : "";
 
       return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${huTypeText(
         state.winInfo.hu.type,
-      )} ${state.winInfo.hu.baseFan} 番${payer}`
+      )} ${state.winInfo.hu.baseFan} 番${payer}`;
     }
 
-    if (state.phase === 'claimDecision' && currentClaim) {
-      const actor = state.players[currentClaim.player].name
-      const from = state.players[currentClaim.from].name
+    if (state.phase === "claimDecision" && currentClaim) {
+      const actor = state.players[currentClaim.player].name;
+      const from = state.players[currentClaim.from].name;
       const actionText =
-        currentClaim.action === 'hu'
-          ? '胡'
-          : currentClaim.action === 'mingGang'
-            ? '明杠'
-            : '碰'
-      return `等待响应：${actor} 可${actionText} ${from} 的 ${tileToText(currentClaim.tile)}`
+        currentClaim.action === "hu"
+          ? "胡"
+          : currentClaim.action === "mingGang"
+            ? "明杠"
+            : "碰";
+      return `等待响应：${actor} 可${actionText} ${from} 的 ${tileToText(currentClaim.tile)}`;
     }
 
-    if (state.phase === 'qiangGangDecision' && state.qiangGang) {
-      const actor = state.players[state.qiangGang.actor].name
+    if (state.phase === "qiangGangDecision" && state.qiangGang) {
+      const actor = state.players[state.qiangGang.actor].name;
       const candidate =
-        qiangGangCandidate === null ? '玩家' : state.players[qiangGangCandidate].name
-      return `等待抢杠胡：${actor} 补杠 ${tileToText(state.qiangGang.tile)}，${candidate} 可胡`
+        qiangGangCandidate === null
+          ? "玩家"
+          : state.players[qiangGangCandidate].name;
+      return `等待抢杠胡：${actor} 补杠 ${tileToText(state.qiangGang.tile)}，${candidate} 可胡`;
     }
 
-    const current = state.players[state.currentPlayer].name
-    return `当前行动：${current}`
-  }, [state, currentClaim, qiangGangCandidate])
+    const current = state.players[state.currentPlayer].name;
+    return `当前行动：${current}`;
+  }, [state, currentClaim, qiangGangCandidate]);
 
   return (
     <div className="mahjong-app">
@@ -102,10 +112,18 @@ function App() {
           </p>
         </div>
         <div className="round-actions">
-          <button type="button" className="btn-main" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
+          <button
+            type="button"
+            className="btn-main"
+            onClick={() => dispatch({ type: "NEXT_ROUND" })}
+          >
             再来一局
           </button>
-          <button type="button" className="btn-sub" onClick={() => dispatch({ type: 'RESET_GAME' })}>
+          <button
+            type="button"
+            className="btn-sub"
+            onClick={() => dispatch({ type: "RESET_GAME" })}
+          >
             重置积分
           </button>
         </div>
@@ -136,13 +154,17 @@ function App() {
         <section className="center-panel">
           <div className="action-panel">
             <h2>操作区</h2>
-            {state.phase === 'playerTurn' && state.currentPlayer === 0 && (
+            {state.phase === "playerTurn" && state.currentPlayer === 0 && (
               <>
                 <p>点击下方手牌出牌</p>
                 <div className="action-buttons">
                   {humanOptions.selfHu && (
-                    <button type="button" onClick={() => dispatch({ type: 'HUMAN_SELF_HU' })}>
-                      自摸（{huTypeText(humanOptions.selfHu.type)} {humanOptions.selfHu.baseFan} 番）
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: "HUMAN_SELF_HU" })}
+                    >
+                      自摸（{huTypeText(humanOptions.selfHu.type)}{" "}
+                      {humanOptions.selfHu.baseFan} 番）
                     </button>
                   )}
                   {humanOptions.anGangTiles.map((tile) => (
@@ -151,8 +173,8 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: 'HUMAN_GANG',
-                          gangType: 'anGang',
+                          type: "HUMAN_GANG",
+                          gangType: "anGang",
                           tile,
                         })
                       }
@@ -166,8 +188,8 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: 'HUMAN_GANG',
-                          gangType: 'buGang',
+                          type: "HUMAN_GANG",
+                          gangType: "buGang",
                           tile,
                         })
                       }
@@ -179,56 +201,30 @@ function App() {
               </>
             )}
 
-            {state.phase === 'claimDecision' && currentClaim?.player === 0 && (
+            {state.phase === "claimDecision" && currentClaim?.player === 0 && (
               <>
                 <p>
                   你可
-                  {currentClaim.action === 'hu'
-                    ? '胡'
-                    : currentClaim.action === 'mingGang'
-                      ? '明杠'
-                      : '碰'}
+                  {currentClaim.action === "hu"
+                    ? "胡"
+                    : currentClaim.action === "mingGang"
+                      ? "明杠"
+                      : "碰"}
                   ：{tileToText(currentClaim.tile)}
                 </p>
                 <div className="action-buttons">
                   <button
                     type="button"
-                    onClick={() => dispatch({ type: 'HUMAN_CLAIM_DECISION', accept: true })}
+                    onClick={() =>
+                      dispatch({ type: "HUMAN_CLAIM_DECISION", accept: true })
+                    }
                   >
                     执行
                   </button>
                   <button
                     type="button"
-                    onClick={() => dispatch({ type: 'HUMAN_CLAIM_DECISION', accept: false })}
-                  >
-                    过
-                  </button>
-                </div>
-              </>
-            )}
-
-            {state.phase === 'qiangGangDecision' && qiangGangCandidate === 0 && state.qiangGang && (
-              <>
-                <p>你可抢杠胡：{tileToText(state.qiangGang.tile)}</p>
-                <div className="action-buttons">
-                  <button
-                    type="button"
                     onClick={() =>
-                      dispatch({
-                        type: 'HUMAN_QIANG_GANG_DECISION',
-                        accept: true,
-                      })
-                    }
-                  >
-                    胡
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      dispatch({
-                        type: 'HUMAN_QIANG_GANG_DECISION',
-                        accept: false,
-                      })
+                      dispatch({ type: "HUMAN_CLAIM_DECISION", accept: false })
                     }
                   >
                     过
@@ -237,11 +233,43 @@ function App() {
               </>
             )}
 
-            {!((state.phase === 'playerTurn' && state.currentPlayer === 0) ||
-              (state.phase === 'claimDecision' && currentClaim?.player === 0) ||
-              (state.phase === 'qiangGangDecision' && qiangGangCandidate === 0)) && (
-              <p>等待 AI 操作中...</p>
-            )}
+            {state.phase === "qiangGangDecision" &&
+              qiangGangCandidate === 0 &&
+              state.qiangGang && (
+                <>
+                  <p>你可抢杠胡：{tileToText(state.qiangGang.tile)}</p>
+                  <div className="action-buttons">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: "HUMAN_QIANG_GANG_DECISION",
+                          accept: true,
+                        })
+                      }
+                    >
+                      胡
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: "HUMAN_QIANG_GANG_DECISION",
+                          accept: false,
+                        })
+                      }
+                    >
+                      过
+                    </button>
+                  </div>
+                </>
+              )}
+
+            {!(
+              (state.phase === "playerTurn" && state.currentPlayer === 0) ||
+              (state.phase === "claimDecision" && currentClaim?.player === 0) ||
+              (state.phase === "qiangGangDecision" && qiangGangCandidate === 0)
+            ) && <p>等待 AI 操作中...</p>}
           </div>
 
           <div className="log-panel">
@@ -268,31 +296,40 @@ function App() {
           state={state}
           showHand
           seatClass="seat-bottom"
-          onDiscard={(tile) => dispatch({ type: 'HUMAN_DISCARD', tile })}
+          onDiscard={(tile) => dispatch({ type: "HUMAN_DISCARD", tile })}
           canDiscard={humanOptions.canDiscard}
         />
       </main>
     </div>
-  )
+  );
 }
 
 type PlayerSeatProps = {
-  title: string
-  playerIndex: number
-  seatClass: string
-  state: ReturnType<typeof createInitialGameState>
-  showHand: boolean
-  canDiscard?: boolean
-  onDiscard?: (tile: Tile) => void
-}
+  title: string;
+  playerIndex: number;
+  seatClass: string;
+  state: ReturnType<typeof createInitialGameState>;
+  showHand: boolean;
+  canDiscard?: boolean;
+  onDiscard?: (tile: Tile) => void;
+};
 
 function PlayerSeat(props: PlayerSeatProps) {
-  const { title, playerIndex, seatClass, state, showHand, canDiscard = false, onDiscard } = props
-  const player = state.players[playerIndex]
-  const isCurrent = state.currentPlayer === playerIndex && state.phase === 'playerTurn'
+  const {
+    title,
+    playerIndex,
+    seatClass,
+    state,
+    showHand,
+    canDiscard = false,
+    onDiscard,
+  } = props;
+  const player = state.players[playerIndex];
+  const isCurrent =
+    state.currentPlayer === playerIndex && state.phase === "playerTurn";
 
   return (
-    <section className={`seat ${seatClass} ${isCurrent ? 'current' : ''}`}>
+    <section className={`seat ${seatClass} ${isCurrent ? "current" : ""}`}>
       <header className="seat-header">
         <strong>{title}</strong>
         <span>积分：{player.score}</span>
@@ -304,7 +341,10 @@ function PlayerSeat(props: PlayerSeatProps) {
           <span className="muted">暂无副露</span>
         ) : (
           player.melds.map((meld, idx) => (
-            <span key={`${meld.type}-${meld.tile}-${idx}`} className="meld-item">
+            <span
+              key={`${meld.type}-${meld.tile}-${idx}`}
+              className="meld-item"
+            >
               {meldTypeText(meld.type)} {tileToText(meld.tile)}
             </span>
           ))
@@ -316,7 +356,10 @@ function PlayerSeat(props: PlayerSeatProps) {
           <span className="muted">未出牌</span>
         ) : (
           player.discards.map((tile, idx) => (
-            <span key={`${tile}-${idx}`} className={`tile chip ${tileClass(tile)}`}>
+            <span
+              key={`${tile}-${idx}`}
+              className={`tile chip ${tileClass(tile)}`}
+            >
               {tileToText(tile)}
             </span>
           ))
@@ -339,13 +382,13 @@ function PlayerSeat(props: PlayerSeatProps) {
         </div>
       )}
     </section>
-  )
+  );
 }
 
 function tileClass(tile: Tile) {
-  if (tile.startsWith('W')) return 'wan'
-  if (tile.startsWith('T')) return 'tiao'
-  return 'tong'
+  if (tile.startsWith("W")) return "wan";
+  if (tile.startsWith("T")) return "tiao";
+  return "tong";
 }
 
-export default App
+export default App;
