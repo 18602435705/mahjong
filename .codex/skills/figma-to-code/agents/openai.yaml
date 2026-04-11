@@ -1,0 +1,3 @@
+interface:
+  display_name: "Figma 转代码"
+  short_description: "根据 Figma 设计稿生成 React 页面与样式"

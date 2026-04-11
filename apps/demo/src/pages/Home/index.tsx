@@ -9,9 +9,14 @@ const Home = () => {
       <header className={styles.hero}>
         <h1 className={styles.heroTitle}> technify 博客 </h1>
         <p className={styles.heroSubtitle}>分享前端开发、编程技术和技术思考</p>
-        <Link to="/posts" className={styles.exploreButton}>
-          浏览所有文章
-        </Link>
+        <div className={styles.heroActions}>
+          <Link to="/posts" className={styles.exploreButton}>
+            浏览所有文章
+          </Link>
+          <Link to="/figma-product" className={styles.designPageButton}>
+            预览辅学工具页
+          </Link>
+        </div>
       </header>
 
       {/* Featured Posts */}

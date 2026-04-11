@@ -1,3 +1,8 @@
+---
+name: figma-to-code
+description: 将 Figma 设计稿转为 React 页面与组件的像素级还原工作流。适用于收到 Figma URL 或 node-id，且需要在本仓库内完成组件拆分、CSS Modules + Less 样式实现与视觉一致性校验的场景。
+---
+
 # Figma UI 设计稿转代码专家
 
 你是 Figma 设计稿转代码的专家，专注于像素级精确还原设计稿。

@@ -1,0 +1,107 @@
+.page {
+  min-height: 100vh;
+  background: #edf0f5;
+  display: flex;
+  justify-content: center;
+  color: #000;
+  font-family: "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.canvas {
+  width: 1440px;
+  min-height: 900px;
+}
+
+.mainArea {
+  width: 1416px;
+  min-height: 812px;
+  margin: 12px auto 0;
+  display: flex;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.monitorArea {
+  width: 1044px;
+  min-height: 812px;
+  display: flex;
+  gap: 12px;
+}
+
+.curveBoard,
+.statusBoard {
+  border-radius: 16px;
+}
+
+.curveBoard {
+  width: 640px;
+  background: #dae0e9;
+}
+
+.statusBoard {
+  width: 392px;
+  background: #d4dae5;
+}
+
+@media (max-width: 1460px) {
+  .canvas {
+    width: 100%;
+  }
+
+  .mainArea {
+    width: calc(100% - 24px);
+  }
+
+  .monitorArea {
+    flex: 1;
+    width: auto;
+  }
+
+  .curveBoard {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .statusBoard {
+    flex: 0 0 36%;
+    width: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .mainArea {
+    flex-direction: column;
+  }
+
+  .monitorArea {
+    min-height: 360px;
+  }
+
+  .curveBoard,
+  .statusBoard {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainArea {
+    width: calc(100% - 16px);
+    margin-top: 8px;
+    gap: 8px;
+  }
+
+  .monitorArea {
+    flex-direction: column;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .curveBoard {
+    min-height: 240px;
+  }
+
+  .statusBoard {
+    min-height: 200px;
+    flex: none;
+  }
+}
