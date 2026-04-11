@@ -1,5 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
-import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+} from "motion/react";
 import "./App.css";
 import { installAudioUnlock, playActionVoice } from "./actionAudio";
 import TileAsset from "./TileAsset";
@@ -17,7 +29,10 @@ import {
   type Tile,
 } from "./mahjongEngine";
 
-function detectMeldChange(prevState: GameState, nextState: GameState): Meld | null {
+function detectMeldChange(
+  prevState: GameState,
+  nextState: GameState,
+): Meld | null {
   for (let index = 0; index < nextState.players.length; index += 1) {
     const prevMelds = prevState.players[index].melds;
     const nextMelds = nextState.players[index].melds;
@@ -51,7 +66,10 @@ function tileToVoiceText(tile: Tile) {
   return `${numberText}${suitText}`;
 }
 
-function detectDiscardedTile(prevState: GameState, nextState: GameState): Tile | null {
+function detectDiscardedTile(
+  prevState: GameState,
+  nextState: GameState,
+): Tile | null {
   for (let index = 0; index < nextState.players.length; index += 1) {
     const prevDiscards = prevState.players[index].discards;
     const nextDiscards = nextState.players[index].discards;
@@ -394,7 +412,16 @@ function App() {
                         })
                       }
                     >
-                      暗杠 {tileToText(tile)}
+                      <span className="action-button-content">
+                        <span className="action-button-label">
+                          暗杠 {tileToText(tile)}
+                        </span>
+                        <TileAsset
+                          tile={tile}
+                          size="chip"
+                          className="action-button-tile"
+                        />
+                      </span>
                     </button>
                   ))}
                   {humanOptions.buGangTiles.map((tile) => (
@@ -409,7 +436,16 @@ function App() {
                         })
                       }
                     >
-                      补杠 {tileToText(tile)}
+                      <span className="action-button-content">
+                        <span className="action-button-label">
+                          补杠 {tileToText(tile)}
+                        </span>
+                        <TileAsset
+                          tile={tile}
+                          size="chip"
+                          className="action-button-tile"
+                        />
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -437,7 +473,20 @@ function App() {
                       })
                     }
                   >
-                    执行
+                    <span className="action-button-content">
+                      <span className="action-button-label">
+                        {currentClaim.action === "hu"
+                          ? "胡"
+                          : currentClaim.action === "mingGang"
+                            ? "杠"
+                            : "碰"}
+                      </span>
+                      <TileAsset
+                        tile={currentClaim.tile}
+                        size="chip"
+                        className="action-button-tile"
+                      />
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -469,7 +518,14 @@ function App() {
                         })
                       }
                     >
-                      胡
+                      <span className="action-button-content">
+                        <span className="action-button-label">抢杠胡</span>
+                        <TileAsset
+                          tile={state.qiangGang.tile}
+                          size="chip"
+                          className="action-button-tile"
+                        />
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -515,9 +571,26 @@ function PlayerSeat(props: PlayerSeatProps) {
     onTileClick,
   } = props;
   const player = state.players[playerIndex];
+  const prefersReducedMotion = useReducedMotion();
   const isCurrent =
     state.currentPlayer === playerIndex && state.phase === "playerTurn";
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
+  const meldEnterOffset =
+    seatClass === "seat-top"
+      ? { x: 0, y: -20 }
+      : seatClass === "seat-bottom"
+        ? { x: 0, y: 20 }
+        : seatClass === "seat-left"
+          ? { x: -20, y: 0 }
+          : { x: 20, y: 0 };
+  const meldEnterRotate =
+    seatClass === "seat-top"
+      ? -7
+      : seatClass === "seat-bottom"
+        ? 7
+        : seatClass === "seat-left"
+          ? -8
+          : 8;
 
   let drawnEntryIndex = -1;
   if (showHand && canDiscard && player.justDrawnTile) {
@@ -547,19 +620,86 @@ function PlayerSeat(props: PlayerSeatProps) {
         className={`seat-main-row ${showHand ? "seat-main-row-human" : "seat-main-row-ai"}`}
       >
         <div className="melds">
-          {player.melds.length === 0 ? (
-            <span className="muted">暂无副露</span>
-          ) : (
-            player.melds.map((meld, idx) => (
-              <span
+          {player.melds.length === 0 && <span className="muted">暂无副露</span>}
+          <AnimatePresence initial={false}>
+            {player.melds.map((meld, idx) => (
+              <motion.span
                 key={`${meld.type}-${meld.tile}-${idx}`}
                 className="meld-item"
+                layout="position"
+                initial={
+                  prefersReducedMotion
+                    ? false
+                    : {
+                        opacity: 0,
+                        scale: 0.58,
+                        x: meldEnterOffset.x,
+                        y: meldEnterOffset.y,
+                        rotate: meldEnterRotate,
+                        filter: "brightness(1.6) saturate(1.2)",
+                      }
+                }
+                animate={{
+                  opacity: 1,
+                  scale: [1.18, 0.95, 1],
+                  x: 0,
+                  y: 0,
+                  rotate: [meldEnterRotate * 0.5, 0],
+                  filter: [
+                    "brightness(1.5) saturate(1.18)",
+                    "brightness(1.08) saturate(1.06)",
+                    "brightness(1) saturate(1)",
+                  ],
+                }}
+                exit={
+                  prefersReducedMotion
+                    ? { opacity: 0 }
+                    : {
+                        opacity: 0,
+                        scale: 0.86,
+                        x: meldEnterOffset.x * 0.45,
+                        y: meldEnterOffset.y * 0.45,
+                        rotate: meldEnterRotate * 0.35,
+                      }
+                }
+                transition={{
+                  layout: {
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 36,
+                    mass: 0.72,
+                  },
+                  opacity: { duration: 0.22, ease: "easeOut" },
+                  x: {
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 28,
+                    mass: 0.72,
+                  },
+                  y: {
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 28,
+                    mass: 0.72,
+                  },
+                  rotate: { duration: 0.42, ease: [0.2, 0.85, 0.2, 1] },
+                  scale: {
+                    duration: 0.44,
+                    ease: [0.22, 0.9, 0.22, 1],
+                    times: [0, 0.58, 1],
+                  },
+                  filter: {
+                    duration: 0.42,
+                    ease: "easeOut",
+                    times: [0, 0.45, 1],
+                  },
+                }}
               >
                 <span className="meld-label">{meldTypeText(meld.type)}</span>
                 <TileAsset tile={meld.tile} size="meld" />
-              </span>
-            ))
-          )}
+              </motion.span>
+            ))}
+          </AnimatePresence>
         </div>
 
         {!showHand && (
@@ -638,7 +778,9 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
   const [flight, setFlight] = useState<DiscardFlightState | null>(null);
 
   useLayoutEffect(() => {
-    const currentLengths = state.players.map((player) => player.discards.length);
+    const currentLengths = state.players.map(
+      (player) => player.discards.length,
+    );
     const previousLengths = previousDiscardLengthsRef.current;
 
     if (!previousLengths) {
@@ -711,16 +853,17 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
     };
   }, [flight]);
 
-  const isFlightTarget = (playerIndex: number, discardIndex: number, tile: Tile) =>
+  const isFlightTarget = (
+    playerIndex: number,
+    discardIndex: number,
+    tile: Tile,
+  ) =>
     flight !== null &&
     flight.playerIndex === playerIndex &&
     flight.discardIndex === discardIndex &&
     flight.tile === tile;
 
-  const renderLane = (
-    key: LaneKey,
-    playerIndex: number,
-  ) => {
+  const renderLane = (key: LaneKey, playerIndex: number) => {
     const player = state.players[playerIndex];
     return (
       <section

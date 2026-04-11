@@ -461,6 +461,8 @@ body,
   align-items: center;
   gap: 3px;
   padding: 2px 4px;
+  will-change: transform, opacity;
+  transform-origin: center center;
   border-radius: 6px;
   border: 1px solid rgba(198, 157, 99, 0.56);
   background:
@@ -780,6 +782,22 @@ body,
     rgba(246, 217, 160, 0.98),
     rgba(223, 184, 119, 0.96)
   );
+}
+
+.action-button-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-button-label {
+  white-space: nowrap;
+}
+
+.action-button-tile.tile-asset--chip {
+  width: clamp(12px, 1.4vw, 18px);
+  height: clamp(16px, 1.95vw, 24px);
+  filter: drop-shadow(0 1px 1px rgba(33, 18, 9, 0.28));
 }
 
 @keyframes app-fade {
