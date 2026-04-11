@@ -1,184 +1,298 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+.mahjong-app {
+  min-height: 100svh;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--text);
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
-#center {
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  color: var(--heading);
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted-text);
+  font-size: 0.93rem;
+}
+
+.round-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.round-actions button,
+.action-buttons button {
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.2s ease;
+}
+
+.round-actions button:hover,
+.action-buttons button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(16, 47, 33, 0.18);
+  background: var(--btn-bg-hover);
+}
+
+.board-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  margin-bottom: 14px;
+}
+
+.board-meta .status {
+  flex: 1;
+  min-width: 260px;
+  color: var(--heading);
+}
+
+.table-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(280px, 1.4fr) minmax(150px, 1fr);
+  grid-template-rows: minmax(120px, auto) minmax(280px, auto) minmax(140px, auto);
+  grid-template-areas:
+    '. top .'
+    'left center right'
+    '. bottom .';
+  gap: 12px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.2), transparent 55%),
+    radial-gradient(circle at 10% 90%, rgba(34, 95, 64, 0.25), transparent 55%),
+    linear-gradient(160deg, #2f7a53, #1f5b3c 72%);
+  border: 1px solid rgba(22, 58, 40, 0.5);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.seat {
+  border: 1px solid var(--seat-border);
+  border-radius: 12px;
+  background: var(--seat-bg);
+  padding: 10px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
   gap: 8px;
-  margin: 32px 0 0;
+  min-height: 110px;
+}
 
-  .logo {
-    height: 18px;
+.seat.current {
+  box-shadow: 0 0 0 2px rgba(232, 185, 90, 0.6) inset;
+}
+
+.seat-top {
+  grid-area: top;
+}
+
+.seat-left {
+  grid-area: left;
+}
+
+.seat-right {
+  grid-area: right;
+}
+
+.seat-bottom {
+  grid-area: bottom;
+}
+
+.seat-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--heading);
+  font-size: 0.94rem;
+}
+
+.melds,
+.discards,
+.hand-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.muted {
+  color: var(--muted-text);
+  font-size: 0.87rem;
+}
+
+.meld-item {
+  background: rgba(255, 247, 222, 0.72);
+  border: 1px solid rgba(120, 95, 44, 0.24);
+  color: #513718;
+  border-radius: 8px;
+  padding: 2px 7px;
+  font-size: 0.84rem;
+}
+
+.tile {
+  border-radius: 8px;
+  border: 1px solid rgba(56, 41, 15, 0.34);
+  background: linear-gradient(180deg, #fffdfa, #f2e8d7);
+  min-width: 42px;
+  height: 34px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2a2317;
+  box-sizing: border-box;
+}
+
+.tile.wan {
+  color: #a0402d;
+}
+
+.tile.tiao {
+  color: #246344;
+}
+
+.tile.tong {
+  color: #245395;
+}
+
+.tile.hand {
+  cursor: pointer;
+}
+
+.tile.hand:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(38, 27, 8, 0.2);
+}
+
+.tile.hand:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.tile.chip {
+  min-width: 36px;
+  height: 28px;
+  font-size: 0.78rem;
+}
+
+.center-panel {
+  grid-area: center;
+  display: grid;
+  gap: 10px;
+  grid-template-rows: minmax(130px, auto) minmax(140px, auto);
+}
+
+.action-panel,
+.log-panel {
+  border: 1px solid rgba(14, 52, 31, 0.34);
+  border-radius: 12px;
+  background: rgba(253, 250, 239, 0.9);
+  padding: 10px;
+}
+
+.action-panel h2,
+.log-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: #273b2d;
+}
+
+.action-panel p {
+  margin: 0;
+  color: #3d4d42;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  font-size: 0.84rem;
+  color: #45594b;
+}
+
+.log-panel li {
+  background: rgba(238, 246, 240, 0.75);
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+@media (max-width: 1024px) {
+  .table-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      'top'
+      'left'
+      'center'
+      'right'
+      'bottom';
   }
 
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
+  .round-actions {
+    width: 100%;
+  }
+
+  .round-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .mahjong-app {
+    padding: 10px;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .round-actions {
     gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
   }
 
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
+  .tile {
+    min-width: 36px;
+    height: 30px;
+    font-size: 0.8rem;
   }
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+  .tile.chip {
+    min-width: 32px;
+    height: 24px;
   }
 }
