@@ -393,6 +393,7 @@ function buildClaimQueue(
   tile: Tile,
   from: number,
 ): ClaimRequest[] {
+  const hu: ClaimRequest[] = [];
   const mingGang: ClaimRequest[] = [];
   const peng: ClaimRequest[] = [];
 
@@ -400,6 +401,12 @@ function buildClaimQueue(
     const player = (from + offset) % 4;
     const target = state.players[player];
     const count = countTile(target.hand, tile);
+    const huResult = evaluateHu([...target.hand, tile], target.melds);
+
+    // 点炮仅支持非平胡牌型（如对对胡、七对、清一色）
+    if (huResult && huResult.type !== "pinghu") {
+      hu.push({ player, action: "hu", tile, from });
+    }
 
     if (count >= 3) {
       mingGang.push({ player, action: "mingGang", tile, from });
@@ -410,7 +417,7 @@ function buildClaimQueue(
     }
   }
 
-  return [...mingGang, ...peng];
+  return [...hu, ...mingGang, ...peng];
 }
 
 function passClaim(baseState: GameState): GameState {
@@ -441,7 +448,7 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
       baseState.players[claim.player].melds,
     );
 
-    if (!huResult) {
+    if (!huResult || huResult.type === "pinghu") {
       return passClaim(baseState);
     }
 
