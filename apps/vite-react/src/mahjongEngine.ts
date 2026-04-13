@@ -24,6 +24,7 @@ export interface PlayerState {
 export type HuType =
   | "pinghu"
   | "duiduihu"
+  | "dasanyuan"
   | "qidui"
   | "longqidui"
   | "shuanghaohua"
@@ -104,6 +105,7 @@ const MAX_LOGS = 18;
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
   duiduihu: "大对",
+  dasanyuan: "大三元",
   qidui: "小七",
   longqidui: "豪华",
   shuanghaohua: "双豪华",
@@ -118,6 +120,7 @@ const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
 const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
   pinghu: 1,
   duiduihu: 2,
+  dasanyuan: 6,
   qidui: 2,
   longqidui: 4,
   shuanghaohua: 6,
@@ -170,6 +173,7 @@ export const huSummaryText = (hu: HuResult) => {
     const qingYiSeByType: Record<HuType, string> = {
       pinghu: "清一色",
       duiduihu: "清一色大对",
+      dasanyuan: "清一色大三元",
       qidui: "清一色小七",
       longqidui: "清一色豪华",
       shuanghaohua: "清一色双豪华",
@@ -233,8 +237,7 @@ function isDiHuSelfScenario(state: GameState, actor: number) {
     player.justDrawnTile !== null &&
     !player.justDrawnFromGang &&
     player.discards.length === 0 &&
-    player.melds.length === 0 &&
-    state.players.every((item) => item.melds.length === 0)
+    player.melds.length === 0
   );
 }
 
@@ -248,8 +251,7 @@ function isDiHuClaimScenario(state: GameState, playerIndex: number) {
     player.justDrawnTile === null &&
     !player.justDrawnFromGang &&
     player.discards.length === 0 &&
-    player.melds.length === 0 &&
-    state.players.every((item) => item.melds.length === 0)
+    player.melds.length === 0
   );
 }
 
@@ -1038,7 +1040,7 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
       type = "qidui";
     }
   } else if (duiduihu) {
-    type = "duiduihu";
+    type = melds.length === 0 ? "dasanyuan" : "duiduihu";
   }
 
   const overlays: HuOverlayType[] = [];
