@@ -23,10 +23,10 @@ export interface PlayerState {
 
 export type HuType =
   | "pinghu"
-  | "duiduihu"
+  | "dadui"
   | "dasanyuan"
-  | "qidui"
-  | "longqidui"
+  | "xiaoqi"
+  | "haohua"
   | "shuanghaohua"
   | "sanhaohua";
 export type HuOverlayType = "qingyise" | "dandiao";
@@ -104,12 +104,12 @@ const MAX_LOGS = 18;
 
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
-  duiduihu: "大对",
+  dadui: "大对", // 别称：对对胡
   dasanyuan: "大三元",
-  qidui: "小七",
-  longqidui: "豪华",
-  shuanghaohua: "双豪华",
-  sanhaohua: "三豪华",
+  xiaoqi: "小七", // 别称：七对
+  haohua: "豪华", // 别称：龙七对
+  shuanghaohua: "双豪华", // 别称：双龙七对
+  sanhaohua: "三豪华", // 别称：三龙七对
 };
 
 const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
@@ -118,18 +118,18 @@ const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
 };
 
 const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
-  pinghu: 1,
-  duiduihu: 2,
-  dasanyuan: 6,
-  qidui: 2,
-  longqidui: 4,
-  shuanghaohua: 6,
-  sanhaohua: 8,
+  pinghu: 3,
+  dadui: 8,
+  dasanyuan: 20,
+  xiaoqi: 10,
+  haohua: 20,
+  shuanghaohua: 40,
+  sanhaohua: 80,
 };
 
 const OVERLAY_FAN_BY_TYPE: Record<HuOverlayType, number> = {
-  qingyise: 2,
-  dandiao: 2,
+  qingyise: 12,
+  dandiao: 15,
 };
 
 const WIN_METHOD_TEXT: Record<WinMethod, string> = {
@@ -145,12 +145,11 @@ const METHOD_EXTRA_FAN: Record<WinMethod, number> = {
   zimo: 0,
   dianpao: 0,
   qianggang: 0,
-  // 杠上花额外加 2 番（自摸不额外加番）。
-  gangshanghua: 2,
-  // 天胡按特殊胡法额外加 3 番。
-  tianhu: 3,
-  // 地胡先按 0 番处理，可再按地方规则调整。
-  dihu: 0,
+  gangshanghua: 0,
+  // 按新规则：天胡额外加 20 番。
+  tianhu: 20,
+  // 按新规则：地胡额外加 20 番。
+  dihu: 20,
 };
 
 const PLAYER_NAMES = ["你", "AI-右", "AI-上", "AI-左"];
@@ -172,10 +171,10 @@ export const huSummaryText = (hu: HuResult) => {
   if (hasQingYiSe) {
     const qingYiSeByType: Record<HuType, string> = {
       pinghu: "清一色",
-      duiduihu: "清一色大对",
+      dadui: "清一色大对",
       dasanyuan: "清一色大三元",
-      qidui: "清一色小七",
-      longqidui: "清一色豪华",
+      xiaoqi: "清一色小七",
+      haohua: "清一色豪华",
       shuanghaohua: "清一色双豪华",
       sanhaohua: "清一色三豪华",
     };
@@ -855,9 +854,28 @@ function settleHu(
   const state = cloneState(baseState);
   const { winner, from, method, tile, hu } = options;
   const methodExtraFan = getMethodExtraFan(method);
-  const totalFan = hu.fan + methodExtraFan;
+  const isDiHuPingHuFixed = method === "dihu" && isPingHuOnly(hu);
+  const isTianHuPingHuFixed = method === "tianhu" && isPingHuOnly(hu);
+  const fixedRuleText = isTianHuPingHuFixed
+    ? "天胡平胡特判"
+    : isDiHuPingHuFixed
+      ? "地胡平胡特判"
+      : "";
+  const totalFan =
+    fixedRuleText !== "" ? methodExtraFan : hu.fan + methodExtraFan;
+  const methodBonusText =
+    methodExtraFan > 0 ? ` + ${winMethodText(method)} ${methodExtraFan} 番` : "";
+  const fanDetailText =
+    fixedRuleText !== ""
+      ? `${huSummaryText(hu)}（${fixedRuleText}）${totalFan} 番`
+      : `${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}`;
+  const isSelfPayAll =
+    method === "zimo" ||
+    method === "gangshanghua" ||
+    method === "tianhu" ||
+    (method === "dihu" && typeof from !== "number");
 
-  if (method === "zimo" || method === "gangshanghua" || method === "tianhu") {
+  if (isSelfPayAll) {
     for (let i = 0; i < state.players.length; i += 1) {
       if (i === winner) {
         continue;
@@ -866,13 +884,9 @@ function settleHu(
       state.players[winner].score += totalFan;
     }
 
-    const methodBonusText =
-      methodExtraFan > 0
-        ? ` + ${winMethodText(method)} ${methodExtraFan} 番`
-        : "";
     appendLog(
       state,
-      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${fanDetailText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
     );
   } else if (typeof from === "number") {
     state.players[from].score -= totalFan;
@@ -880,7 +894,7 @@ function settleHu(
 
     appendLog(
       state,
-      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${huSummaryText(hu)} ${hu.fan} 番），${state.players[from].name} 付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${fanDetailText}），${state.players[from].name} 付 ${totalFan} 分`,
     );
 
     state.players[winner].hand.push(tile);
@@ -981,13 +995,13 @@ function tryEvaluateStandardHu(hand: Tile[], melds: Meld[]) {
   if (meldNeed < 0 || hand.length !== required) {
     return {
       standardWin: false,
-      duiduihu: false,
+      dadui: false,
     };
   }
 
   const counts = toCountArray(hand);
   let standardWin = false;
-  let duiduihu = false;
+  let dadui = false;
 
   for (let i = 0; i < counts.length; i += 1) {
     if (counts[i] < 2) {
@@ -1001,19 +1015,19 @@ function tryEvaluateStandardHu(hand: Tile[], melds: Meld[]) {
     }
 
     if (canFormTripletsOnly(counts, meldNeed)) {
-      duiduihu = true;
+      dadui = true;
     }
 
     counts[i] += 2;
 
-    if (standardWin && duiduihu) {
+    if (standardWin && dadui) {
       break;
     }
   }
 
   return {
     standardWin,
-    duiduihu,
+    dadui,
   };
 }
 
@@ -1021,26 +1035,26 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   const sortedHand = [...hand];
   sortTiles(sortedHand);
 
-  const qiduiInfo = getQiDuiInfo(sortedHand, melds);
-  const { standardWin, duiduihu } = tryEvaluateStandardHu(sortedHand, melds);
+  const xiaoqiInfo = getXiaoQiInfo(sortedHand, melds);
+  const { standardWin, dadui } = tryEvaluateStandardHu(sortedHand, melds);
 
-  if (!qiduiInfo.valid && !standardWin) {
+  if (!xiaoqiInfo.valid && !standardWin) {
     return null;
   }
 
   let type: HuType = "pinghu";
-  if (qiduiInfo.valid) {
-    if (qiduiInfo.quadPairCount >= 3) {
+  if (xiaoqiInfo.valid) {
+    if (xiaoqiInfo.quadPairCount >= 3) {
       type = "sanhaohua";
-    } else if (qiduiInfo.quadPairCount >= 2) {
+    } else if (xiaoqiInfo.quadPairCount >= 2) {
       type = "shuanghaohua";
-    } else if (qiduiInfo.quadPairCount >= 1) {
-      type = "longqidui";
+    } else if (xiaoqiInfo.quadPairCount >= 1) {
+      type = "haohua";
     } else {
-      type = "qidui";
+      type = "xiaoqi";
     }
-  } else if (duiduihu) {
-    type = melds.length === 0 ? "dasanyuan" : "duiduihu";
+  } else if (dadui) {
+    type = melds.length === 0 ? "dasanyuan" : "dadui";
   }
 
   const overlays: HuOverlayType[] = [];
@@ -1066,7 +1080,7 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   };
 }
 
-function getQiDuiInfo(hand: Tile[], melds: Meld[]) {
+function getXiaoQiInfo(hand: Tile[], melds: Meld[]) {
   if (melds.length > 0 || hand.length !== 14) {
     return {
       valid: false,
