@@ -27,6 +27,8 @@ body,
 
   --side-ai-back-w: clamp(8px, calc(var(--table-h) / 58), 14px);
   --side-ai-back-h: calc(var(--side-ai-back-w) * 1.55);
+  --side-reveal-hand-w: clamp(12px, calc(var(--human-hand-w) * 0.78), 24px);
+  --side-reveal-hand-h: calc(var(--side-reveal-hand-w) * 1.36);
   --wood-deep: #4a2f1c;
   --wood-mid: #6c472b;
   --wood-glow: #9a6d3f;
@@ -439,6 +441,30 @@ body,
   height: var(--side-ai-back-h);
   transform: rotate(90deg);
   transform-origin: center;
+}
+
+.seat.revealed-ai-hand .tile.hand:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.seat-left.revealed-ai-hand .hand-row,
+.seat-right.revealed-ai-hand .hand-row {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-content: flex-start;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.seat-left.revealed-ai-hand .tile-asset--hand,
+.seat-right.revealed-ai-hand .tile-asset--hand {
+  width: var(--side-reveal-hand-w);
+  height: var(--side-reveal-hand-h);
 }
 
 .hand-row {

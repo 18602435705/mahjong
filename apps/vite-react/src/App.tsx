@@ -248,14 +248,21 @@ function App() {
         state.winInfo.specials,
       );
       const huSummary = huSummaryText(state.winInfo.hu);
+      const winFanDetail = calculateWinTotalFan(
+        state.winInfo.hu,
+        state.winInfo.method,
+        state.winInfo.specials,
+      );
+      const displayedHandFan =
+        state.winInfo.hu.fan + winFanDetail.pingHuDefaultMethodFan;
       const payer =
         typeof state.winInfo.from === "number"
           ? `，由 ${state.players[state.winInfo.from].name} 付分`
           : "";
       const handFanText =
-        state.winInfo.totalFan === state.winInfo.hu.fan
+        winFanDetail.pingHuDefaultMethodFan > 0
           ? `${huSummary} ${state.winInfo.totalFan} 番`
-          : `${huSummary} ${state.winInfo.hu.fan} 番（总 ${state.winInfo.totalFan} 番）`;
+          : `${huSummary} ${displayedHandFan} 番（总 ${state.winInfo.totalFan} 番）`;
 
       return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${handFanText}${payer}`;
     }
@@ -617,6 +624,8 @@ function PlayerSeat(props: PlayerSeatProps) {
   const prefersReducedMotion = useReducedMotion();
   const isCurrent =
     state.currentPlayer === playerIndex && state.phase === "playerTurn";
+  const shouldShowHand = showHand || state.phase === "gameOver";
+  const isRevealedAIHand = shouldShowHand && !showHand;
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
   const meldEnterOffset =
     seatClass === "seat-top"
@@ -636,7 +645,7 @@ function PlayerSeat(props: PlayerSeatProps) {
           : 8;
 
   let drawnEntryIndex = -1;
-  if (showHand && canDiscard && player.justDrawnTile) {
+  if (shouldShowHand && canDiscard && player.justDrawnTile) {
     for (let i = handEntries.length - 1; i >= 0; i -= 1) {
       if (handEntries[i].tile === player.justDrawnTile) {
         drawnEntryIndex = i;
@@ -652,11 +661,15 @@ function PlayerSeat(props: PlayerSeatProps) {
       : handEntries;
 
   return (
-    <section className={`seat ${seatClass} ${isCurrent ? "current" : ""}`}>
+    <section
+      className={`seat ${seatClass} ${isCurrent ? "current" : ""} ${
+        isRevealedAIHand ? "revealed-ai-hand" : ""
+      }`}
+    >
       <header className="seat-header">
         <strong>{title}</strong>
         <span>积分：{player.score}</span>
-        {!showHand && <span>手牌：{player.hand.length} 张</span>}
+        {!shouldShowHand && <span>手牌：{player.hand.length} 张</span>}
       </header>
 
       <div
@@ -666,7 +679,7 @@ function PlayerSeat(props: PlayerSeatProps) {
           {player.melds.length === 0 && <span className="muted">暂无副露</span>}
           <AnimatePresence initial={false}>
             {player.melds.map((meld, idx) => {
-              const hideTileFace = meld.type === "anGang" && !showHand;
+              const hideTileFace = meld.type === "anGang" && !shouldShowHand;
 
               return (
                 <motion.span
@@ -753,7 +766,7 @@ function PlayerSeat(props: PlayerSeatProps) {
           </AnimatePresence>
         </div>
 
-        {!showHand && (
+        {!shouldShowHand && (
           <div className="hidden-hand-row" aria-label={`${title} 手牌（背面）`}>
             {player.hand.map((_, index) => (
               <span
@@ -766,7 +779,7 @@ function PlayerSeat(props: PlayerSeatProps) {
           </div>
         )}
 
-        {showHand && (
+        {shouldShowHand && (
           <div className="hand-row">
             {normalHandEntries.map(({ tile, index }) => (
               <button

@@ -97,6 +97,7 @@ export type GameAction =
 
 const SUITS: Suit[] = ["W", "T", "B"];
 const MAX_LOGS = 18;
+const PURE_PINGHU_DEFAULT_FAN = 3;
 
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
@@ -245,7 +246,9 @@ export function calculateWinTotalFan(
   const specialExtraFan = getSpecialsExtraFan(specials);
   const purePingHuBaseFan = hu.baseFan + hu.overlayFan + specialExtraFan;
   const pingHuDefaultMethodFan =
-    isPingHuOnly(hu) && purePingHuBaseFan === 0 ? 3 : 0;
+    isPingHuOnly(hu) && purePingHuBaseFan === 0
+      ? PURE_PINGHU_DEFAULT_FAN
+      : 0;
   const totalFan =
     hu.fan + methodExtraFan + specialExtraFan + pingHuDefaultMethodFan;
 
