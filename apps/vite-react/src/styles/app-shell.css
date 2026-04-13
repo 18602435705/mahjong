@@ -1,0 +1,87 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.mahjong-app {
+  --ratio: 2.16744; /* 932 / 430 */
+  --table-w: min(100vw, calc(100svh * var(--ratio)));
+  --table-h: min(100svh, calc(100vw / var(--ratio)));
+  --pad: clamp(6px, 1.2vw, 12px);
+  --gap: clamp(4px, 0.8vw, 10px);
+
+  --human-hand-w: clamp(18px, calc(var(--table-w) / 17.2), 44px);
+  --human-hand-h: calc(var(--human-hand-w) * 1.36);
+
+  --chip-w: clamp(11px, calc(var(--human-hand-w) * 0.62), 24px);
+  --chip-h: calc(var(--chip-w) * 1.36);
+  --side-discard-w: clamp(8px, calc(var(--chip-w) * 0.64), 15px);
+  --side-discard-h: clamp(11px, calc(var(--chip-h) * 0.64), 22px);
+
+  --ai-back-w: clamp(10px, calc(var(--table-w) / 66), 22px);
+  --ai-back-h: calc(var(--ai-back-w) * 1.4);
+
+  --side-ai-back-w: clamp(8px, calc(var(--table-h) / 58), 14px);
+  --side-ai-back-h: calc(var(--side-ai-back-w) * 1.55);
+  --side-reveal-hand-w: clamp(12px, calc(var(--human-hand-w) * 0.78), 24px);
+  --side-reveal-hand-h: calc(var(--side-reveal-hand-w) * 1.36);
+  --wood-deep: #4a2f1c;
+  --wood-mid: #6c472b;
+  --wood-glow: #9a6d3f;
+  --felt-deep: #245238;
+  --felt-mid: #2f6946;
+  --felt-light: #3b7d56;
+  --line-gold: rgba(217, 181, 113, 0.72);
+
+  width: 100vw;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: #f3ebda;
+  box-sizing: border-box;
+  user-select: none;
+  background:
+    radial-gradient(
+      circle at 48% 55%,
+      rgba(255, 236, 201, 0.12),
+      transparent 48%
+    ),
+    radial-gradient(circle at 18% 16%, rgba(0, 0, 0, 0.18), transparent 38%),
+    radial-gradient(circle at 82% 88%, rgba(0, 0, 0, 0.2), transparent 44%),
+    repeating-linear-gradient(
+      24deg,
+      rgba(255, 220, 170, 0.07),
+      rgba(255, 220, 170, 0.07) 2px,
+      transparent 2px,
+      transparent 16px
+    ),
+    linear-gradient(130deg, #3e2616 0%, #5a3821 44%, #342112 100%);
+  animation: app-fade 0.35s ease-out both;
+}
+
+@keyframes app-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

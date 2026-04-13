@@ -1,0 +1,15 @@
+.muted {
+  font-size: clamp(0.5rem, 0.92vw, 0.62rem);
+  color: #d6c3a1;
+}
+
+.tile {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-width: 0;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

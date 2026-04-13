@@ -1,4 +1,5 @@
-import { SUIT, tileToText, type Tile } from "./mahjongEngine";
+import "./TileAsset.css";
+import { SUIT, tileToText, type Tile } from "../mahjongEngine";
 
 type TileAssetProps = {
   tile?: Tile;

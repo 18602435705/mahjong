@@ -1,0 +1,84 @@
+.table-grid {
+  position: relative;
+  width: var(--table-w);
+  height: var(--table-h);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(92px, 0.95fr) minmax(0, 2.3fr) minmax(
+      92px,
+      0.95fr
+    );
+  grid-template-rows: minmax(58px, 0.85fr) minmax(0, 2.05fr) minmax(
+      76px,
+      1.06fr
+    );
+  grid-template-areas:
+    "top top top"
+    "left center right"
+    "bottom bottom bottom";
+  gap: var(--gap);
+  padding: var(--pad);
+  border: 2px solid rgba(164, 118, 68, 0.78);
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(246, 230, 177, 0.08),
+      transparent 52%
+    ),
+    linear-gradient(
+      165deg,
+      var(--felt-light) 0%,
+      var(--felt-mid) 40%,
+      var(--felt-deep) 100%
+    );
+  box-shadow:
+    inset 0 0 0 2px rgba(56, 34, 18, 0.38),
+    inset 0 0 0 10px rgba(80, 53, 31, 0.24),
+    inset 0 -14px 26px rgba(0, 0, 0, 0.25),
+    0 12px 22px rgba(29, 16, 8, 0.34);
+}
+
+.table-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      -26deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 14px
+    ),
+    repeating-linear-gradient(
+      26deg,
+      rgba(0, 0, 0, 0.04),
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+}
+
+.table-grid::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line-gold);
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 224, 165, 0.12),
+    0 0 0 1px rgba(58, 36, 20, 0.4);
+}
+
+.center-panel {
+  position: relative;
+  z-index: 1;
+  grid-area: center;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--gap);
+}
