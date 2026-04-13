@@ -24,6 +24,7 @@ export interface PlayerState {
 export type HuType =
   | "pinghu"
   | "dadui"
+  | "dandiao"
   | "dasanyuan"
   | "xiaoqi"
   | "haohua"
@@ -102,6 +103,7 @@ const PURE_PINGHU_DEFAULT_FAN = 3;
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
   dadui: "大对", // 别称：对对胡
+  dandiao: "单钓",
   dasanyuan: "大三元",
   xiaoqi: "小七", // 别称：七对
   haohua: "豪华", // 别称：龙七对
@@ -116,6 +118,7 @@ const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
 const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
   pinghu: 0,
   dadui: 8,
+  dandiao: 15,
   dasanyuan: 20,
   xiaoqi: 10,
   haohua: 20,
@@ -187,6 +190,7 @@ export const huSummaryText = (hu: HuResult) => {
     const qingYiSeByType: Record<HuType, string> = {
       pinghu: "清一色",
       dadui: "清一色大对",
+      dandiao: "清一色单钓",
       dasanyuan: "清一色大三元",
       xiaoqi: "清一色小七",
       haohua: "清一色豪华",
@@ -1121,7 +1125,11 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
       type = "xiaoqi";
     }
   } else if (dadui) {
-    type = melds.length === 0 ? "dasanyuan" : "dadui";
+    if (sortedHand.length === 2) {
+      type = "dandiao";
+    } else {
+      type = melds.length === 0 ? "dasanyuan" : "dadui";
+    }
   }
 
   const overlays: HuOverlayType[] = [];
