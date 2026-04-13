@@ -1,4 +1,20 @@
-export type ActionSound = "draw" | "discard" | "peng" | "gang" | "hu";
+export const ACTION_SOUND = {
+  DRAW: "draw",
+  DISCARD: "discard",
+  PENG: "peng",
+  GANG: "gang",
+  HU: "hu",
+} as const;
+export type ActionSound = (typeof ACTION_SOUND)[keyof typeof ACTION_SOUND];
+
+const WINDOW_EVENT = {
+  POINTER_DOWN: "pointerdown",
+  KEY_DOWN: "keydown",
+} as const;
+const LANGUAGE = {
+  CHINESE_PREFIX: "zh",
+  CHINESE_MAINLAND: "zh-CN",
+} as const;
 
 type ToneOptions = {
   frequency: number;
@@ -82,7 +98,7 @@ export function playActionSound(action: ActionSound) {
 
   const start = context.currentTime + 0.01;
 
-  if (action === "draw") {
+  if (action === ACTION_SOUND.DRAW) {
     scheduleTone(context, gainNode, {
       frequency: 508,
       start,
@@ -93,7 +109,7 @@ export function playActionSound(action: ActionSound) {
     return;
   }
 
-  if (action === "discard") {
+  if (action === ACTION_SOUND.DISCARD) {
     scheduleTone(context, gainNode, {
       frequency: 410,
       start,
@@ -111,7 +127,7 @@ export function playActionSound(action: ActionSound) {
     return;
   }
 
-  if (action === "peng") {
+  if (action === ACTION_SOUND.PENG) {
     [0, 0.06, 0.12].forEach((offset) => {
       scheduleTone(context, gainNode, {
         frequency: 362,
@@ -124,7 +140,7 @@ export function playActionSound(action: ActionSound) {
     return;
   }
 
-  if (action === "gang") {
+  if (action === ACTION_SOUND.GANG) {
     scheduleTone(context, gainNode, {
       frequency: 225,
       start,
@@ -174,13 +190,13 @@ export function installAudioUnlock() {
     }
 
     void context.resume().catch(() => {});
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
+    window.removeEventListener(WINDOW_EVENT.POINTER_DOWN, unlock);
+    window.removeEventListener(WINDOW_EVENT.KEY_DOWN, unlock);
     unlockBound = false;
   };
 
-  window.addEventListener("pointerdown", unlock, { passive: true });
-  window.addEventListener("keydown", unlock);
+  window.addEventListener(WINDOW_EVENT.POINTER_DOWN, unlock, { passive: true });
+  window.addEventListener(WINDOW_EVENT.KEY_DOWN, unlock);
 }
 
 export function playActionVoice(voice: string) {
@@ -193,10 +209,10 @@ export function playActionVoice(voice: string) {
   const voices = synthesis.getVoices();
   const chineseVoice =
     voices.find((item) =>
-      item.lang.toLowerCase().startsWith("zh"),
+      item.lang.toLowerCase().startsWith(LANGUAGE.CHINESE_PREFIX),
     ) ?? null;
 
-  utterance.lang = "zh-CN";
+  utterance.lang = LANGUAGE.CHINESE_MAINLAND;
   utterance.rate = 1;
   utterance.pitch = 1;
   utterance.volume = 0.96;

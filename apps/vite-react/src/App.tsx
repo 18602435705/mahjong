@@ -17,16 +17,23 @@ import { installAudioUnlock, playActionVoice } from "./actionAudio";
 import TileAsset from "./TileAsset";
 import {
   calculateWinTotalFan,
+  CLAIM_ACTION,
   createInitialGameState,
+  GAME_ACTION,
   getSelfHuMethod,
   getSelfHuSpecials,
   gameReducer,
   getCurrentClaim,
   getCurrentQiangGangCandidate,
   getHumanTurnOptions,
+  HU_SPECIAL,
   huSummaryText,
+  MELD_TYPE,
   meldTypeText,
+  PHASE,
+  SUIT,
   tileToText,
+  WIN_METHOD,
   winMethodText,
   type GameState,
   type Meld,
@@ -63,12 +70,20 @@ function detectMeldChange(
 const VOICE_NUMBERS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const AI_DISCARD_DELAY_MS = 1500;
 const AI_RESPONSE_DELAY_MS = 1000;
+const KEYBOARD = {
+  ESCAPE: "Escape",
+} as const;
+const WINDOW_EVENT = {
+  POINTER_DOWN: "pointerdown",
+  KEY_DOWN: "keydown",
+} as const;
 
 function tileToVoiceText(tile: Tile) {
   const suit = tile[0];
   const rank = Number(tile.slice(1));
   const numberText = VOICE_NUMBERS[rank - 1] ?? `${rank}`;
-  const suitText = suit === "W" ? "万" : suit === "T" ? "条" : "筒";
+  const suitText =
+    suit === SUIT.WAN ? "万" : suit === SUIT.BAMBOO ? "条" : "筒";
   return `${numberText}${suitText}`;
 }
 
@@ -94,19 +109,19 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
 
   if (!prevState.winInfo && nextState.winInfo) {
     const tileText = tileToVoiceText(nextState.winInfo.tile);
-    if (nextState.winInfo.specials.includes("tianhu")) {
+    if (nextState.winInfo.specials.includes(HU_SPECIAL.TIAN_HU)) {
       return `天胡 ${tileText}`;
     }
-    if (nextState.winInfo.specials.includes("dihu")) {
+    if (nextState.winInfo.specials.includes(HU_SPECIAL.DI_HU)) {
       return `地胡 ${tileText}`;
     }
-    if (nextState.winInfo.method === "zimo") {
+    if (nextState.winInfo.method === WIN_METHOD.ZIMO) {
       return `自摸 ${tileText}`;
     }
-    if (nextState.winInfo.method === "gangshanghua") {
+    if (nextState.winInfo.method === WIN_METHOD.GANG_SHANG_HUA) {
       return `杠上花 ${tileText}`;
     }
-    if (nextState.winInfo.method === "qianggang") {
+    if (nextState.winInfo.method === WIN_METHOD.QIANG_GANG) {
       return `抢杠胡 ${tileText}`;
     }
     return `胡 ${tileText}`;
@@ -115,13 +130,13 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
   const meld = detectMeldChange(prevState, nextState);
   if (meld) {
     const tileText = tileToVoiceText(meld.tile);
-    if (meld.type === "peng") {
+    if (meld.type === MELD_TYPE.PENG) {
       return `碰 ${tileText}`;
     }
-    if (meld.type === "mingGang") {
+    if (meld.type === MELD_TYPE.MING_GANG) {
       return `明杠 ${tileText}`;
     }
-    if (meld.type === "anGang") {
+    if (meld.type === MELD_TYPE.AN_GANG) {
       return "暗杠";
     }
     return `补杠 ${tileText}`;
@@ -161,17 +176,17 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (state.phase === "gameOver") {
+    if (state.phase === PHASE.GAME_OVER) {
       return;
     }
 
     const shouldRunAI =
-      (state.phase === "playerTurn" &&
+      (state.phase === PHASE.PLAYER_TURN &&
         !state.players[state.currentPlayer].isHuman) ||
-      (state.phase === "claimDecision" &&
+      (state.phase === PHASE.CLAIM_DECISION &&
         currentClaim !== null &&
         !state.players[currentClaim.player].isHuman) ||
-      (state.phase === "qiangGangDecision" &&
+      (state.phase === PHASE.QIANG_GANG_DECISION &&
         qiangGangCandidate !== null &&
         !state.players[qiangGangCandidate].isHuman);
 
@@ -180,10 +195,12 @@ function App() {
     }
 
     const aiDelay =
-      state.phase === "playerTurn" ? AI_DISCARD_DELAY_MS : AI_RESPONSE_DELAY_MS;
+      state.phase === PHASE.PLAYER_TURN
+        ? AI_DISCARD_DELAY_MS
+        : AI_RESPONSE_DELAY_MS;
 
     const timer = window.setTimeout(() => {
-      dispatch({ type: "AI_STEP" });
+      dispatch({ type: GAME_ACTION.AI_STEP });
     }, aiDelay);
 
     return () => {
@@ -222,22 +239,22 @@ function App() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === KEYBOARD.ESCAPE) {
         setMenuOpen(false);
       }
     };
 
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener(WINDOW_EVENT.POINTER_DOWN, handlePointerDown);
+    window.addEventListener(WINDOW_EVENT.KEY_DOWN, handleKeyDown);
 
     return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener(WINDOW_EVENT.POINTER_DOWN, handlePointerDown);
+      window.removeEventListener(WINDOW_EVENT.KEY_DOWN, handleKeyDown);
     };
   }, [menuOpen]);
 
   const statusText = useMemo(() => {
-    if (state.phase === "gameOver") {
+    if (state.phase === PHASE.GAME_OVER) {
       if (!state.winInfo) {
         return "本局结束：流局";
       }
@@ -267,19 +284,19 @@ function App() {
       return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${handFanText}${payer}`;
     }
 
-    if (state.phase === "claimDecision" && currentClaim) {
+    if (state.phase === PHASE.CLAIM_DECISION && currentClaim) {
       const actor = state.players[currentClaim.player].name;
       const from = state.players[currentClaim.from].name;
       const actionText =
-        currentClaim.action === "hu"
+        currentClaim.action === CLAIM_ACTION.HU
           ? "胡"
-          : currentClaim.action === "mingGang"
+          : currentClaim.action === CLAIM_ACTION.MING_GANG
             ? "明杠"
             : "碰";
       return `等待响应：${actor} 可${actionText} ${from} 的 ${tileToText(currentClaim.tile)}`;
     }
 
-    if (state.phase === "qiangGangDecision" && state.qiangGang) {
+    if (state.phase === PHASE.QIANG_GANG_DECISION && state.qiangGang) {
       const actor = state.players[state.qiangGang.actor].name;
       const candidate =
         qiangGangCandidate === null
@@ -294,7 +311,7 @@ function App() {
 
   const humanHandSignature = state.players[0].hand.join("|");
   const humanSelfHuMethod: WinMethod =
-    humanOptions.selfHuMethod ?? getSelfHuMethod(state, 0) ?? "zimo";
+    humanOptions.selfHuMethod ?? getSelfHuMethod(state, 0) ?? WIN_METHOD.ZIMO;
   const humanSelfHuSpecials: HuSpecialType[] =
     humanOptions.selfHuSpecials ?? getSelfHuSpecials(state, 0);
 
@@ -304,9 +321,9 @@ function App() {
       ? selectedDiscard.key
       : null;
   const isHumanActionPending =
-    (state.phase === "playerTurn" && state.currentPlayer === 0) ||
-    (state.phase === "claimDecision" && currentClaim?.player === 0) ||
-    (state.phase === "qiangGangDecision" && qiangGangCandidate === 0);
+    (state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0) ||
+    (state.phase === PHASE.CLAIM_DECISION && currentClaim?.player === 0) ||
+    (state.phase === PHASE.QIANG_GANG_DECISION && qiangGangCandidate === 0);
 
   const handleHumanTileClick = (tile: Tile, index: number) => {
     if (!humanOptions.canDiscard) {
@@ -315,7 +332,7 @@ function App() {
 
     const key = `${tile}-${index}`;
     if (activeSelectedDiscardKey === key) {
-      dispatch({ type: "HUMAN_DISCARD", tile });
+      dispatch({ type: GAME_ACTION.HUMAN_DISCARD, tile });
       setSelectedDiscard(null);
       return;
     }
@@ -346,7 +363,7 @@ function App() {
               type="button"
               className="menu-item btn-main"
               onClick={() => {
-                dispatch({ type: "NEXT_ROUND" });
+                dispatch({ type: GAME_ACTION.NEXT_ROUND });
                 setMenuOpen(false);
               }}
             >
@@ -356,7 +373,7 @@ function App() {
               type="button"
               className="menu-item btn-sub"
               onClick={() => {
-                dispatch({ type: "RESET_GAME" });
+                dispatch({ type: GAME_ACTION.RESET_GAME });
                 setMenuOpen(false);
               }}
             >
@@ -414,7 +431,7 @@ function App() {
         <section className="action-float" aria-live="polite">
           <div className="action-panel action-panel-floating">
             <h2>操作</h2>
-            {state.phase === "playerTurn" && state.currentPlayer === 0 && (
+            {state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0 && (
               <>
                 <p>双击出牌</p>
                 <div className="action-buttons">
@@ -422,14 +439,14 @@ function App() {
                     <button
                       className="action-btn action-btn-hu"
                       type="button"
-                      onClick={() => dispatch({ type: "HUMAN_SELF_HU" })}
+                      onClick={() =>
+                        dispatch({ type: GAME_ACTION.HUMAN_SELF_HU })
+                      }
                     >
                       {`${winMethodText(
                         humanSelfHuMethod,
                         humanSelfHuSpecials,
-                      )}（${huSummaryText(
-                        humanOptions.selfHu,
-                      )} ${
+                      )}（${huSummaryText(humanOptions.selfHu)} ${
                         calculateWinTotalFan(
                           humanOptions.selfHu,
                           humanSelfHuMethod,
@@ -445,8 +462,8 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: "HUMAN_GANG",
-                          gangType: "anGang",
+                          type: GAME_ACTION.HUMAN_GANG,
+                          gangType: MELD_TYPE.AN_GANG,
                           tile,
                         })
                       }
@@ -470,8 +487,8 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: "HUMAN_GANG",
-                          gangType: "buGang",
+                          type: GAME_ACTION.HUMAN_GANG,
+                          gangType: MELD_TYPE.BU_GANG,
                           tile,
                         })
                       }
@@ -492,66 +509,67 @@ function App() {
               </>
             )}
 
-            {state.phase === "claimDecision" && currentClaim?.player === 0 && (
-              <>
-                <p>
-                  你可
-                  {currentClaim.action === "hu"
-                    ? "胡"
-                    : currentClaim.action === "mingGang"
-                      ? "明杠"
-                      : "碰"}
-                  ：{tileToText(currentClaim.tile)}
-                </p>
-                <div className="action-buttons">
-                  <button
-                    className={`action-btn ${
-                      currentClaim.action === "hu"
-                        ? "action-btn-hu"
-                        : currentClaim.action === "mingGang"
-                          ? "action-btn-gang"
-                          : "action-btn-peng"
-                    }`}
-                    type="button"
-                    onClick={() =>
-                      dispatch({
-                        type: "HUMAN_CLAIM_DECISION",
-                        accept: true,
-                      })
-                    }
-                  >
-                    <span className="action-button-content">
-                      <span className="action-button-label">
-                        {currentClaim.action === "hu"
-                          ? "胡"
-                          : currentClaim.action === "mingGang"
-                            ? "杠"
-                            : "碰"}
+            {state.phase === PHASE.CLAIM_DECISION &&
+              currentClaim?.player === 0 && (
+                <>
+                  <p>
+                    你可
+                    {currentClaim.action === CLAIM_ACTION.HU
+                      ? "胡"
+                      : currentClaim.action === CLAIM_ACTION.MING_GANG
+                        ? "明杠"
+                        : "碰"}
+                    ：{tileToText(currentClaim.tile)}
+                  </p>
+                  <div className="action-buttons">
+                    <button
+                      className={`action-btn ${
+                        currentClaim.action === CLAIM_ACTION.HU
+                          ? "action-btn-hu"
+                          : currentClaim.action === CLAIM_ACTION.MING_GANG
+                            ? "action-btn-gang"
+                            : "action-btn-peng"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: GAME_ACTION.HUMAN_CLAIM_DECISION,
+                          accept: true,
+                        })
+                      }
+                    >
+                      <span className="action-button-content">
+                        <span className="action-button-label">
+                          {currentClaim.action === CLAIM_ACTION.HU
+                            ? "胡"
+                            : currentClaim.action === CLAIM_ACTION.MING_GANG
+                              ? "杠"
+                              : "碰"}
+                        </span>
+                        <TileAsset
+                          tile={currentClaim.tile}
+                          size="chip"
+                          className="action-button-tile"
+                        />
                       </span>
-                      <TileAsset
-                        tile={currentClaim.tile}
-                        size="chip"
-                        className="action-button-tile"
-                      />
-                    </span>
-                  </button>
-                  <button
-                    className="action-btn action-btn-pass"
-                    type="button"
-                    onClick={() =>
-                      dispatch({
-                        type: "HUMAN_CLAIM_DECISION",
-                        accept: false,
-                      })
-                    }
-                  >
-                    过
-                  </button>
-                </div>
-              </>
-            )}
+                    </button>
+                    <button
+                      className="action-btn action-btn-pass"
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: GAME_ACTION.HUMAN_CLAIM_DECISION,
+                          accept: false,
+                        })
+                      }
+                    >
+                      过
+                    </button>
+                  </div>
+                </>
+              )}
 
-            {state.phase === "qiangGangDecision" &&
+            {state.phase === PHASE.QIANG_GANG_DECISION &&
               qiangGangCandidate === 0 &&
               state.qiangGang && (
                 <>
@@ -562,7 +580,7 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: "HUMAN_QIANG_GANG_DECISION",
+                          type: GAME_ACTION.HUMAN_QIANG_GANG_DECISION,
                           accept: true,
                         })
                       }
@@ -581,7 +599,7 @@ function App() {
                       type="button"
                       onClick={() =>
                         dispatch({
-                          type: "HUMAN_QIANG_GANG_DECISION",
+                          type: GAME_ACTION.HUMAN_QIANG_GANG_DECISION,
                           accept: false,
                         })
                       }
@@ -623,8 +641,8 @@ function PlayerSeat(props: PlayerSeatProps) {
   const player = state.players[playerIndex];
   const prefersReducedMotion = useReducedMotion();
   const isCurrent =
-    state.currentPlayer === playerIndex && state.phase === "playerTurn";
-  const shouldShowHand = showHand || state.phase === "gameOver";
+    state.currentPlayer === playerIndex && state.phase === PHASE.PLAYER_TURN;
+  const shouldShowHand = showHand || state.phase === PHASE.GAME_OVER;
   const isRevealedAIHand = shouldShowHand && !showHand;
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
   const meldEnterOffset =
@@ -679,7 +697,8 @@ function PlayerSeat(props: PlayerSeatProps) {
           {player.melds.length === 0 && <span className="muted">暂无副露</span>}
           <AnimatePresence initial={false}>
             {player.melds.map((meld, idx) => {
-              const hideTileFace = meld.type === "anGang" && !shouldShowHand;
+              const hideTileFace =
+                meld.type === MELD_TYPE.AN_GANG && !shouldShowHand;
 
               return (
                 <motion.span

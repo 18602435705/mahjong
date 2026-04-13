@@ -1,4 +1,4 @@
-import { tileToText, type Tile } from "./mahjongEngine";
+import { SUIT, tileToText, type Tile } from "./mahjongEngine";
 
 type TileAssetProps = {
   tile?: Tile;
@@ -127,14 +127,7 @@ function drawBamboo(rank: number) {
           stroke="#244f35"
           strokeWidth="0.7"
         />
-        <rect
-          x="-2"
-          y="-10"
-          width="4"
-          height="20"
-          rx="2"
-          fill={highlight}
-        />
+        <rect x="-2" y="-10" width="4" height="20" rx="2" fill={highlight} />
         <circle cx="0" cy="-14" r="3.7" fill="#1f5a39" />
         <circle cx="0" cy="14" r="3.7" fill="#1f5a39" />
       </g>
@@ -172,11 +165,11 @@ function drawCharacter(rank: number) {
 }
 
 function drawCenter(tile: Tile, rank: number) {
-  if (tile.startsWith("W")) {
+  if (tile.startsWith(SUIT.WAN)) {
     return drawCharacter(rank);
   }
 
-  if (tile.startsWith("T")) {
+  if (tile.startsWith(SUIT.BAMBOO)) {
     return drawBamboo(rank);
   }
 
@@ -184,7 +177,12 @@ function drawCenter(tile: Tile, rank: number) {
 }
 
 function TileAsset(props: TileAssetProps) {
-  const { tile = "W1", size = "hand", className, face = "front" } = props;
+  const {
+    tile = `${SUIT.WAN}1` as Tile,
+    size = "hand",
+    className,
+    face = "front",
+  } = props;
   const rank = Number(tile.slice(1));
   const isBack = face === "back";
 
