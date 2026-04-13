@@ -21,8 +21,14 @@ export interface PlayerState {
   score: number;
 }
 
-export type HuType = "pinghu" | "duiduihu" | "qidui" | "longqidui";
-export type HuOverlayType = "qingyise";
+export type HuType =
+  | "pinghu"
+  | "duiduihu"
+  | "qidui"
+  | "longqidui"
+  | "shuanghaohua"
+  | "sanhaohua";
+export type HuOverlayType = "qingyise" | "dandiao";
 export type WinMethod =
   | "zimo"
   | "dianpao"
@@ -100,10 +106,13 @@ const HU_TYPE_TEXT: Record<HuType, string> = {
   duiduihu: "大对",
   qidui: "小七",
   longqidui: "豪华",
+  shuanghaohua: "双豪华",
+  sanhaohua: "三豪华",
 };
 
 const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
   qingyise: "清一色",
+  dandiao: "单钓",
 };
 
 const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
@@ -111,10 +120,13 @@ const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
   duiduihu: 2,
   qidui: 2,
   longqidui: 4,
+  shuanghaohua: 6,
+  sanhaohua: 8,
 };
 
 const OVERLAY_FAN_BY_TYPE: Record<HuOverlayType, number> = {
   qingyise: 2,
+  dandiao: 2,
 };
 
 const WIN_METHOD_TEXT: Record<WinMethod, string> = {
@@ -147,26 +159,30 @@ const TILE_TYPES: Tile[] = SUITS.flatMap((suit) =>
 export const huTypeText = (type: HuType) => HU_TYPE_TEXT[type];
 export const huOverlayText = (type: HuOverlayType) => HU_OVERLAY_TEXT[type];
 export const winMethodText = (method: WinMethod) => WIN_METHOD_TEXT[method];
-export const getMethodExtraFan = (method: WinMethod) => METHOD_EXTRA_FAN[method];
+export const getMethodExtraFan = (method: WinMethod) =>
+  METHOD_EXTRA_FAN[method];
 export const huSummaryText = (hu: HuResult) => {
   const hasQingYiSe = hu.overlays.includes("qingyise");
-  if (!hasQingYiSe) {
-    return huTypeText(hu.type);
+  const hasDanDiao = hu.overlays.includes("dandiao");
+
+  let summary = huTypeText(hu.type);
+  if (hasQingYiSe) {
+    const qingYiSeByType: Record<HuType, string> = {
+      pinghu: "清一色",
+      duiduihu: "清一色大对",
+      qidui: "清一色小七",
+      longqidui: "清一色豪华",
+      shuanghaohua: "清一色双豪华",
+      sanhaohua: "清一色三豪华",
+    };
+    summary = qingYiSeByType[hu.type];
   }
 
-  if (hu.type === "pinghu") {
-    return "清一色";
+  if (hasDanDiao) {
+    return `${summary}单钓`;
   }
 
-  if (hu.type === "duiduihu") {
-    return "清一色大对";
-  }
-
-  if (hu.type === "qidui") {
-    return "清一色小七";
-  }
-
-  return "清一色龙豪华";
+  return summary;
 };
 
 export const tileToText = (tile: Tile): string => {
@@ -276,8 +292,7 @@ export const getHumanTurnOptions = (state: GameState) => {
   const canAct = state.phase === "playerTurn" && state.currentPlayer === 0;
   const canUseDrawActions =
     canAct && human.justDrawnTile !== null && human.hand.length % 3 === 2;
-  const selfHu =
-    canUseDrawActions ? evaluateHu(human.hand, human.melds) : null;
+  const selfHu = canUseDrawActions ? evaluateHu(human.hand, human.melds) : null;
   const selfHuMethod = selfHu ? getSelfHuMethod(state, 0) : null;
 
   return {
@@ -850,7 +865,9 @@ function settleHu(
     }
 
     const methodBonusText =
-      methodExtraFan > 0 ? ` + ${winMethodText(method)} ${methodExtraFan} 番` : "";
+      methodExtraFan > 0
+        ? ` + ${winMethodText(method)} ${methodExtraFan} 番`
+        : "";
     appendLog(
       state,
       `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
@@ -1011,7 +1028,15 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
 
   let type: HuType = "pinghu";
   if (qiduiInfo.valid) {
-    type = qiduiInfo.long ? "longqidui" : "qidui";
+    if (qiduiInfo.quadPairCount >= 3) {
+      type = "sanhaohua";
+    } else if (qiduiInfo.quadPairCount >= 2) {
+      type = "shuanghaohua";
+    } else if (qiduiInfo.quadPairCount >= 1) {
+      type = "longqidui";
+    } else {
+      type = "qidui";
+    }
   } else if (duiduihu) {
     type = "duiduihu";
   }
@@ -1019,6 +1044,9 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   const overlays: HuOverlayType[] = [];
   if (isQingYiSe(sortedHand, melds)) {
     overlays.push("qingyise");
+  }
+  if (isDanDiaoWin(sortedHand)) {
+    overlays.push("dandiao");
   }
 
   const baseFan = BASE_FAN_BY_HU_TYPE[type];
@@ -1040,13 +1068,13 @@ function getQiDuiInfo(hand: Tile[], melds: Meld[]) {
   if (melds.length > 0 || hand.length !== 14) {
     return {
       valid: false,
-      long: false,
+      quadPairCount: 0,
     };
   }
 
   const counts = countTiles(hand);
   let pairCount = 0;
-  let long = false;
+  let quadPairCount = 0;
 
   for (const tile of TILE_TYPES) {
     const value = counts[tile];
@@ -1057,19 +1085,19 @@ function getQiDuiInfo(hand: Tile[], melds: Meld[]) {
     if (value % 2 !== 0) {
       return {
         valid: false,
-        long: false,
+        quadPairCount: 0,
       };
     }
 
     pairCount += value / 2;
     if (value >= 4) {
-      long = true;
+      quadPairCount += 1;
     }
   }
 
   return {
     valid: pairCount === 7,
-    long,
+    quadPairCount,
   };
 }
 
@@ -1081,6 +1109,10 @@ function isQingYiSe(hand: Tile[], melds: Meld[]) {
 
   const firstSuit = tileSuit(tiles[0]);
   return tiles.every((tile) => tileSuit(tile) === firstSuit);
+}
+
+function isDanDiaoWin(hand: Tile[]) {
+  return hand.length === 2 && hand[0] === hand[1];
 }
 
 function canFormMelds(counts: number[], meldNeed: number) {
