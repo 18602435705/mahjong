@@ -150,6 +150,11 @@ type DrawSource = (typeof DRAW_SOURCE)[keyof typeof DRAW_SOURCE];
 const SUITS: Suit[] = [SUIT.WAN, SUIT.BAMBOO, SUIT.DOT];
 const MAX_LOGS = 18;
 const PURE_PINGHU_DEFAULT_FAN = 3;
+const GANG_SCORE = {
+  MING_GANG: 3,
+  AN_GANG_PER_OPPONENT: 3,
+  BU_GANG_PER_OPPONENT: 3,
+} as const;
 
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
@@ -750,7 +755,7 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
     settleMingGangScore(state, claim.player, claim.from);
     appendLog(
       state,
-      `${actor.name} 明杠 ${tileToText(claim.tile)}，${state.players[claim.from].name} 付 1 分`,
+      `${actor.name} 明杠 ${tileToText(claim.tile)}，${state.players[claim.from].name} 付 ${GANG_SCORE.MING_GANG} 分`,
     );
 
     state.pendingClaims = [];
@@ -825,10 +830,10 @@ function tryAnGang(baseState: GameState, actor: number, tile: Tile): GameState {
   removeTiles(player.hand, tile, 4);
   player.melds.push({ type: MELD_TYPE.AN_GANG, tile });
   sortTiles(player.hand);
-  settleAnOrBuGangScore(state, actor);
+  settleAnOrBuGangScore(state, actor, GANG_SCORE.AN_GANG_PER_OPPONENT);
   appendLog(
     state,
-    `${player.name} 暗杠 ${tileToText(tile)}，其余三家各付 1 分`,
+    `${player.name} 暗杠 ${tileToText(tile)}，其余三家各付 ${GANG_SCORE.AN_GANG_PER_OPPONENT} 分`,
   );
 
   return enterTurn(state, actor, true, DRAW_SOURCE.GANG);
@@ -957,10 +962,10 @@ function executeBuGang(
 
   meld.type = MELD_TYPE.BU_GANG;
   sortTiles(player.hand);
-  settleAnOrBuGangScore(state, actor);
+  settleAnOrBuGangScore(state, actor, GANG_SCORE.BU_GANG_PER_OPPONENT);
   appendLog(
     state,
-    `${player.name} 补杠 ${tileToText(tile)}，其余三家各付 1 分`,
+    `${player.name} 补杠 ${tileToText(tile)}，其余三家各付 ${GANG_SCORE.BU_GANG_PER_OPPONENT} 分`,
   );
 
   state.qiangGang = null;
@@ -1094,17 +1099,21 @@ function enterTurn(
 }
 
 function settleMingGangScore(state: GameState, actor: number, from: number) {
-  state.players[actor].score += 1;
-  state.players[from].score -= 1;
+  state.players[actor].score += GANG_SCORE.MING_GANG;
+  state.players[from].score -= GANG_SCORE.MING_GANG;
 }
 
-function settleAnOrBuGangScore(state: GameState, actor: number) {
+function settleAnOrBuGangScore(
+  state: GameState,
+  actor: number,
+  scorePerOpponent: number,
+) {
   for (let i = 0; i < state.players.length; i += 1) {
     if (i === actor) {
       continue;
     }
-    state.players[i].score -= 1;
-    state.players[actor].score += 1;
+    state.players[i].score -= scorePerOpponent;
+    state.players[actor].score += scorePerOpponent;
   }
 }
 
