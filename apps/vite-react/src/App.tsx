@@ -644,6 +644,14 @@ function PlayerSeat(props: PlayerSeatProps) {
     state.currentPlayer === playerIndex && state.phase === PHASE.PLAYER_TURN;
   const shouldShowHand = showHand || state.phase === PHASE.GAME_OVER;
   const isRevealedAIHand = shouldShowHand && !showHand;
+  const isDealerOpeningTurn =
+    playerIndex === 0 &&
+    state.currentPlayer === 0 &&
+    state.phase === PHASE.PLAYER_TURN &&
+    state.players.every(
+      (seatPlayer) =>
+        seatPlayer.discards.length === 0 && seatPlayer.melds.length === 0,
+    );
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
   const meldEnterOffset =
     seatClass === "seat-top"
@@ -663,7 +671,7 @@ function PlayerSeat(props: PlayerSeatProps) {
           : 8;
 
   let drawnEntryIndex = -1;
-  if (shouldShowHand && canDiscard && player.justDrawnTile) {
+  if (shouldShowHand && canDiscard && player.justDrawnTile && !isDealerOpeningTurn) {
     for (let i = handEntries.length - 1; i >= 0; i -= 1) {
       if (handEntries[i].tile === player.justDrawnTile) {
         drawnEntryIndex = i;
