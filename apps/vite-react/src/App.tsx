@@ -98,6 +98,9 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
     if (nextState.winInfo.method === "tianhu") {
       return `天胡 ${tileText}`;
     }
+    if (nextState.winInfo.method === "dihu") {
+      return `地胡 ${tileText}`;
+    }
     if (nextState.winInfo.method === "gangshanghua") {
       return `杠上花 ${tileText}`;
     }

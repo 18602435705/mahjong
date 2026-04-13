@@ -28,7 +28,8 @@ export type WinMethod =
   | "dianpao"
   | "qianggang"
   | "gangshanghua"
-  | "tianhu";
+  | "tianhu"
+  | "dihu";
 
 export interface HuResult {
   type: HuType;
@@ -122,6 +123,7 @@ const WIN_METHOD_TEXT: Record<WinMethod, string> = {
   qianggang: "抢杠胡",
   gangshanghua: "杠上花",
   tianhu: "天胡",
+  dihu: "地胡",
 };
 
 const METHOD_EXTRA_FAN: Record<WinMethod, number> = {
@@ -132,6 +134,8 @@ const METHOD_EXTRA_FAN: Record<WinMethod, number> = {
   gangshanghua: 2,
   // 天胡按特殊胡法额外加 3 番。
   tianhu: 3,
+  // 地胡先按 0 番处理，可再按地方规则调整。
+  dihu: 0,
 };
 
 const PLAYER_NAMES = ["你", "AI-右", "AI-上", "AI-左"];
@@ -203,6 +207,36 @@ function isPingHuOnly(hu: HuResult) {
   return hu.type === "pinghu" && hu.overlays.length === 0;
 }
 
+function isDiHuSelfScenario(state: GameState, actor: number) {
+  if (actor === 0) {
+    return false;
+  }
+
+  const player = state.players[actor];
+  return (
+    player.justDrawnTile !== null &&
+    !player.justDrawnFromGang &&
+    player.discards.length === 0 &&
+    player.melds.length === 0 &&
+    state.players.every((item) => item.melds.length === 0)
+  );
+}
+
+function isDiHuClaimScenario(state: GameState, playerIndex: number) {
+  if (playerIndex === 0) {
+    return false;
+  }
+
+  const player = state.players[playerIndex];
+  return (
+    player.justDrawnTile === null &&
+    !player.justDrawnFromGang &&
+    player.discards.length === 0 &&
+    player.melds.length === 0 &&
+    state.players.every((item) => item.melds.length === 0)
+  );
+}
+
 function isRoundPristine(state: GameState) {
   return state.players.every(
     (player) => player.discards.length === 0 && player.melds.length === 0,
@@ -228,6 +262,10 @@ export function getSelfHuMethod(
 
   if (actor === 0 && isRoundPristine(state)) {
     return "tianhu";
+  }
+
+  if (isDiHuSelfScenario(state, actor)) {
+    return "dihu";
   }
 
   return "zimo";
@@ -503,8 +541,9 @@ function buildClaimQueue(
     const count = countTile(target.hand, tile);
     const huResult = evaluateHu([...target.hand, tile], target.melds);
 
-    // 点炮仅禁平胡门清，叠加牌型（如清一色平胡）可点炮。
-    if (huResult && !isPingHuOnly(huResult)) {
+    const diHuClaim = huResult ? isDiHuClaimScenario(state, player) : false;
+    // 常规点炮仅禁纯平胡，地胡场景放开平胡点炮。
+    if (huResult && (!isPingHuOnly(huResult) || diHuClaim)) {
       hu.push({ player, action: "hu", tile, from });
     }
 
@@ -547,15 +586,18 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
       [...baseState.players[claim.player].hand, claim.tile],
       baseState.players[claim.player].melds,
     );
+    const diHuClaim = huResult
+      ? isDiHuClaimScenario(baseState, claim.player)
+      : false;
 
-    if (!huResult || isPingHuOnly(huResult)) {
+    if (!huResult || (isPingHuOnly(huResult) && !diHuClaim)) {
       return passClaim(baseState);
     }
 
     return settleHu(baseState, {
       winner: claim.player,
       from: claim.from,
-      method: "dianpao",
+      method: diHuClaim ? "dihu" : "dianpao",
       tile: claim.tile,
       hu: huResult,
     });
