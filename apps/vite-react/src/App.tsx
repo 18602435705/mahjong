@@ -17,16 +17,20 @@ import { installAudioUnlock, playActionVoice } from "./actionAudio";
 import TileAsset from "./TileAsset";
 import {
   createInitialGameState,
+  getMethodExtraFan,
+  getSelfHuMethod,
   gameReducer,
   getCurrentClaim,
   getCurrentQiangGangCandidate,
   getHumanTurnOptions,
-  huTypeText,
+  huSummaryText,
   meldTypeText,
   tileToText,
+  winMethodText,
   type GameState,
   type Meld,
   type Tile,
+  type WinMethod,
 } from "./mahjongEngine";
 
 function detectMeldChange(
@@ -90,6 +94,12 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
     const tileText = tileToVoiceText(nextState.winInfo.tile);
     if (nextState.winInfo.method === "zimo") {
       return `自摸 ${tileText}`;
+    }
+    if (nextState.winInfo.method === "tianhu") {
+      return `天胡 ${tileText}`;
+    }
+    if (nextState.winInfo.method === "gangshanghua") {
+      return `杠上花 ${tileText}`;
     }
     if (nextState.winInfo.method === "qianggang") {
       return `抢杠胡 ${tileText}`;
@@ -228,20 +238,18 @@ function App() {
       }
 
       const winner = state.players[state.winInfo.winner].name;
-      const methodText =
-        state.winInfo.method === "zimo"
-          ? "自摸"
-          : state.winInfo.method === "qianggang"
-            ? "抢杠胡"
-            : "点炮胡";
+      const methodText = winMethodText(state.winInfo.method);
+      const huSummary = huSummaryText(state.winInfo.hu);
       const payer =
         typeof state.winInfo.from === "number"
           ? `，由 ${state.players[state.winInfo.from].name} 付分`
           : "";
+      const handFanText =
+        state.winInfo.totalFan === state.winInfo.hu.fan
+          ? `${huSummary} ${state.winInfo.totalFan} 番`
+          : `${huSummary} ${state.winInfo.hu.fan} 番（总 ${state.winInfo.totalFan} 番）`;
 
-      return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${huTypeText(
-        state.winInfo.hu.type,
-      )} ${state.winInfo.hu.baseFan} 番${payer}`;
+      return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${handFanText}${payer}`;
     }
 
     if (state.phase === "claimDecision" && currentClaim) {
@@ -270,6 +278,8 @@ function App() {
   }, [state, currentClaim, qiangGangCandidate]);
 
   const humanHandSignature = state.players[0].hand.join("|");
+  const humanSelfHuMethod: WinMethod =
+    humanOptions.selfHuMethod ?? getSelfHuMethod(state, 0) ?? "zimo";
 
   const activeSelectedDiscardKey =
     humanOptions.canDiscard &&
@@ -397,7 +407,12 @@ function App() {
                       type="button"
                       onClick={() => dispatch({ type: "HUMAN_SELF_HU" })}
                     >
-                      {`自摸（${huTypeText(humanOptions.selfHu.type)})`}
+                      {`${winMethodText(humanSelfHuMethod)}（${huSummaryText(
+                        humanOptions.selfHu,
+                      )} ${
+                        humanOptions.selfHu.fan +
+                        getMethodExtraFan(humanSelfHuMethod)
+                      } 番）`}
                     </button>
                   )}
                   {humanOptions.anGangTiles.map((tile) => (

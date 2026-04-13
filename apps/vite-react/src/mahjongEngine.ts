@@ -15,22 +15,33 @@ export interface PlayerState {
   isHuman: boolean;
   hand: Tile[];
   justDrawnTile: Tile | null;
+  justDrawnFromGang: boolean;
   melds: Meld[];
   discards: Tile[];
   score: number;
 }
 
-export type HuType = "pinghu" | "duiduihu" | "qidui" | "qingyise";
+export type HuType = "pinghu" | "duiduihu" | "qidui" | "longqidui";
+export type HuOverlayType = "qingyise";
+export type WinMethod =
+  | "zimo"
+  | "dianpao"
+  | "qianggang"
+  | "gangshanghua"
+  | "tianhu";
 
 export interface HuResult {
   type: HuType;
   baseFan: number;
+  overlays: HuOverlayType[];
+  overlayFan: number;
+  fan: number;
 }
 
 export interface WinInfo {
   winner: number;
   from?: number;
-  method: "zimo" | "dianpao" | "qianggang";
+  method: WinMethod;
   hu: HuResult;
   totalFan: number;
   tile: Tile;
@@ -85,16 +96,42 @@ const MAX_LOGS = 18;
 
 const HU_TYPE_TEXT: Record<HuType, string> = {
   pinghu: "平胡",
-  duiduihu: "对对胡",
-  qidui: "七对",
+  duiduihu: "大对",
+  qidui: "小七",
+  longqidui: "豪华",
+};
+
+const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
   qingyise: "清一色",
 };
 
-const FAN_BY_HU_TYPE: Record<HuType, number> = {
+const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
   pinghu: 1,
   duiduihu: 2,
   qidui: 2,
-  qingyise: 3,
+  longqidui: 4,
+};
+
+const OVERLAY_FAN_BY_TYPE: Record<HuOverlayType, number> = {
+  qingyise: 2,
+};
+
+const WIN_METHOD_TEXT: Record<WinMethod, string> = {
+  zimo: "自摸",
+  dianpao: "点炮胡",
+  qianggang: "抢杠胡",
+  gangshanghua: "杠上花",
+  tianhu: "天胡",
+};
+
+const METHOD_EXTRA_FAN: Record<WinMethod, number> = {
+  zimo: 0,
+  dianpao: 0,
+  qianggang: 0,
+  // 杠上花额外加 2 番（自摸不额外加番）。
+  gangshanghua: 2,
+  // 天胡按特殊胡法额外加 3 番。
+  tianhu: 3,
 };
 
 const PLAYER_NAMES = ["你", "AI-右", "AI-上", "AI-左"];
@@ -104,6 +141,29 @@ const TILE_TYPES: Tile[] = SUITS.flatMap((suit) =>
 );
 
 export const huTypeText = (type: HuType) => HU_TYPE_TEXT[type];
+export const huOverlayText = (type: HuOverlayType) => HU_OVERLAY_TEXT[type];
+export const winMethodText = (method: WinMethod) => WIN_METHOD_TEXT[method];
+export const getMethodExtraFan = (method: WinMethod) => METHOD_EXTRA_FAN[method];
+export const huSummaryText = (hu: HuResult) => {
+  const hasQingYiSe = hu.overlays.includes("qingyise");
+  if (!hasQingYiSe) {
+    return huTypeText(hu.type);
+  }
+
+  if (hu.type === "pinghu") {
+    return "清一色";
+  }
+
+  if (hu.type === "duiduihu") {
+    return "清一色大对";
+  }
+
+  if (hu.type === "qidui") {
+    return "清一色小七";
+  }
+
+  return "清一色龙豪华";
+};
 
 export const tileToText = (tile: Tile): string => {
   const suitLabel: Record<Suit, string> = {
@@ -139,6 +199,40 @@ export const getCurrentQiangGangCandidate = (
   return state.qiangGang.candidates[state.qiangGang.index] ?? null;
 };
 
+function isPingHuOnly(hu: HuResult) {
+  return hu.type === "pinghu" && hu.overlays.length === 0;
+}
+
+function isRoundPristine(state: GameState) {
+  return state.players.every(
+    (player) => player.discards.length === 0 && player.melds.length === 0,
+  );
+}
+
+export function getSelfHuMethod(
+  state: GameState,
+  actor: number,
+): WinMethod | null {
+  if (state.phase !== "playerTurn" || state.currentPlayer !== actor) {
+    return null;
+  }
+
+  const player = state.players[actor];
+  if (player.justDrawnTile === null || player.hand.length % 3 !== 2) {
+    return null;
+  }
+
+  if (player.justDrawnFromGang) {
+    return "gangshanghua";
+  }
+
+  if (actor === 0 && isRoundPristine(state)) {
+    return "tianhu";
+  }
+
+  return "zimo";
+}
+
 export const getHumanTurnOptions = (state: GameState) => {
   const human = state.players[0];
   const canAct = state.phase === "playerTurn" && state.currentPlayer === 0;
@@ -146,10 +240,12 @@ export const getHumanTurnOptions = (state: GameState) => {
     canAct && human.justDrawnTile !== null && human.hand.length % 3 === 2;
   const selfHu =
     canUseDrawActions ? evaluateHu(human.hand, human.melds) : null;
+  const selfHuMethod = selfHu ? getSelfHuMethod(state, 0) : null;
 
   return {
     canDiscard: canAct,
     selfHu,
+    selfHuMethod,
     anGangTiles: canUseDrawActions ? getAnGangOptions(human) : [],
     buGangTiles: canUseDrawActions ? getBuGangOptions(human) : [],
   };
@@ -264,9 +360,10 @@ function runAIStep(state: GameState): GameState {
   if (canUseDrawActions) {
     const selfHu = evaluateHu(player.hand, player.melds);
     if (selfHu) {
+      const method = getSelfHuMethod(state, actor) ?? "zimo";
       return settleHu(state, {
         winner: actor,
-        method: "zimo",
+        method,
         tile: player.hand[player.hand.length - 1],
         hu: selfHu,
       });
@@ -299,6 +396,7 @@ function createRoundState(scores: number[], round: number): GameState {
     isHuman: index === 0,
     hand: [],
     justDrawnTile: null,
+    justDrawnFromGang: false,
     melds: [],
     discards: [],
     score: scores[index] ?? 0,
@@ -316,6 +414,7 @@ function createRoundState(scores: number[], round: number): GameState {
   const dealerTile = wall.pop();
   if (dealerTile) {
     players[0].hand.push(dealerTile);
+    players[0].justDrawnTile = dealerTile;
   }
 
   players.forEach((player) => {
@@ -373,6 +472,7 @@ function discardTile(
 
   player.discards.push(tile);
   player.justDrawnTile = null;
+  player.justDrawnFromGang = false;
   sortTiles(player.hand);
   state.lastDiscard = { tile, from: actor };
   appendLog(state, `${player.name} 打出 ${tileToText(tile)}`);
@@ -403,8 +503,8 @@ function buildClaimQueue(
     const count = countTile(target.hand, tile);
     const huResult = evaluateHu([...target.hand, tile], target.melds);
 
-    // 点炮仅支持非平胡牌型（如对对胡、七对、清一色）
-    if (huResult && huResult.type !== "pinghu") {
+    // 点炮仅禁平胡门清，叠加牌型（如清一色平胡）可点炮。
+    if (huResult && !isPingHuOnly(huResult)) {
       hu.push({ player, action: "hu", tile, from });
     }
 
@@ -448,7 +548,7 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
       baseState.players[claim.player].melds,
     );
 
-    if (!huResult || huResult.type === "pinghu") {
+    if (!huResult || isPingHuOnly(huResult)) {
       return passClaim(baseState);
     }
 
@@ -482,7 +582,7 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
     state.phase = "playerTurn";
     state.currentPlayer = claim.player;
 
-    return enterTurn(state, claim.player, true);
+    return enterTurn(state, claim.player, true, "gang");
   }
 
   const state = cloneState(baseState);
@@ -506,11 +606,12 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
 }
 
 function trySelfHu(baseState: GameState, actor: number): GameState {
-  const player = baseState.players[actor];
-  if (player.justDrawnTile === null || player.hand.length % 3 !== 2) {
+  const method = getSelfHuMethod(baseState, actor);
+  if (!method) {
     return baseState;
   }
 
+  const player = baseState.players[actor];
   const hu = evaluateHu(player.hand, player.melds);
   if (!hu) {
     return baseState;
@@ -518,7 +619,7 @@ function trySelfHu(baseState: GameState, actor: number): GameState {
 
   return settleHu(baseState, {
     winner: actor,
-    method: "zimo",
+    method,
     tile: player.hand[player.hand.length - 1],
     hu,
   });
@@ -549,7 +650,7 @@ function tryAnGang(baseState: GameState, actor: number, tile: Tile): GameState {
     `${player.name} 暗杠 ${tileToText(tile)}，其余三家各付 1 分`,
   );
 
-  return enterTurn(state, actor, true);
+  return enterTurn(state, actor, true, "gang");
 }
 
 function tryBuGang(baseState: GameState, actor: number, tile: Tile): GameState {
@@ -679,7 +780,7 @@ function executeBuGang(
   state.pendingClaims = [];
   state.lastDiscard = null;
 
-  return enterTurn(state, actor, true);
+  return enterTurn(state, actor, true, "gang");
 }
 
 function settleHu(
@@ -687,17 +788,17 @@ function settleHu(
   options: {
     winner: number;
     from?: number;
-    method: "zimo" | "dianpao" | "qianggang";
+    method: WinMethod;
     tile: Tile;
     hu: HuResult;
   },
 ): GameState {
   const state = cloneState(baseState);
   const { winner, from, method, tile, hu } = options;
-  const zimoExtra = method === "zimo" ? 1 : 0;
-  const totalFan = hu.baseFan + zimoExtra;
+  const methodExtraFan = getMethodExtraFan(method);
+  const totalFan = hu.fan + methodExtraFan;
 
-  if (method === "zimo") {
+  if (method === "zimo" || method === "gangshanghua" || method === "tianhu") {
     for (let i = 0; i < state.players.length; i += 1) {
       if (i === winner) {
         continue;
@@ -706,18 +807,19 @@ function settleHu(
       state.players[winner].score += totalFan;
     }
 
+    const methodBonusText =
+      methodExtraFan > 0 ? ` + ${winMethodText(method)} ${methodExtraFan} 番` : "";
     appendLog(
       state,
-      `${state.players[winner].name} 自摸 ${tileToText(tile)}（${huTypeText(hu.type)} ${hu.baseFan} 番 + 自摸 1 番），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
     );
   } else if (typeof from === "number") {
     state.players[from].score -= totalFan;
     state.players[winner].score += totalFan;
 
-    const methodText = method === "qianggang" ? "抢杠胡" : "点炮胡";
     appendLog(
       state,
-      `${state.players[winner].name} ${methodText} ${tileToText(tile)}（${huTypeText(hu.type)} ${hu.baseFan} 番），${state.players[from].name} 付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${huSummaryText(hu)} ${hu.fan} 番），${state.players[from].name} 付 ${totalFan} 分`,
     );
 
     state.players[winner].hand.push(tile);
@@ -746,10 +848,12 @@ function enterTurn(
   baseState: GameState,
   playerIndex: number,
   shouldDraw: boolean,
+  drawSource: "normal" | "gang" = "normal",
 ): GameState {
   const state = cloneState(baseState);
   for (const player of state.players) {
     player.justDrawnTile = null;
+    player.justDrawnFromGang = false;
   }
 
   state.currentPlayer = playerIndex;
@@ -774,6 +878,7 @@ function enterTurn(
   const player = state.players[playerIndex];
   player.hand.push(drawn);
   player.justDrawnTile = drawn;
+  player.justDrawnFromGang = drawSource === "gang";
   sortTiles(player.hand);
   appendLog(state, `${player.name} 摸牌`);
 
@@ -855,37 +960,51 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   const sortedHand = [...hand];
   sortTiles(sortedHand);
 
-  const qidui = isQiDui(sortedHand, melds);
+  const qiduiInfo = getQiDuiInfo(sortedHand, melds);
   const { standardWin, duiduihu } = tryEvaluateStandardHu(sortedHand, melds);
 
-  if (!qidui && !standardWin) {
+  if (!qiduiInfo.valid && !standardWin) {
     return null;
   }
 
-  const qingyise = isQingYiSe(sortedHand, melds);
-
   let type: HuType = "pinghu";
-  if (qingyise) {
-    type = "qingyise";
+  if (qiduiInfo.valid) {
+    type = qiduiInfo.long ? "longqidui" : "qidui";
   } else if (duiduihu) {
     type = "duiduihu";
-  } else if (qidui) {
-    type = "qidui";
   }
+
+  const overlays: HuOverlayType[] = [];
+  if (isQingYiSe(sortedHand, melds)) {
+    overlays.push("qingyise");
+  }
+
+  const baseFan = BASE_FAN_BY_HU_TYPE[type];
+  const overlayFan = overlays.reduce(
+    (sum, overlay) => sum + OVERLAY_FAN_BY_TYPE[overlay],
+    0,
+  );
 
   return {
     type,
-    baseFan: FAN_BY_HU_TYPE[type],
+    baseFan,
+    overlays,
+    overlayFan,
+    fan: baseFan + overlayFan,
   };
 }
 
-function isQiDui(hand: Tile[], melds: Meld[]) {
+function getQiDuiInfo(hand: Tile[], melds: Meld[]) {
   if (melds.length > 0 || hand.length !== 14) {
-    return false;
+    return {
+      valid: false,
+      long: false,
+    };
   }
 
   const counts = countTiles(hand);
   let pairCount = 0;
+  let long = false;
 
   for (const tile of TILE_TYPES) {
     const value = counts[tile];
@@ -894,13 +1013,22 @@ function isQiDui(hand: Tile[], melds: Meld[]) {
     }
 
     if (value % 2 !== 0) {
-      return false;
+      return {
+        valid: false,
+        long: false,
+      };
     }
 
     pairCount += value / 2;
+    if (value >= 4) {
+      long = true;
+    }
   }
 
-  return pairCount === 7;
+  return {
+    valid: pairCount === 7,
+    long,
+  };
 }
 
 function isQingYiSe(hand: Tile[], melds: Meld[]) {
