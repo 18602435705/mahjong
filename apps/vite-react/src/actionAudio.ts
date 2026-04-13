@@ -29,6 +29,9 @@ let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let unlockBound = false;
 
+/**
+ * 惰性创建并复用 Web Audio 上下文与主音量节点；在不支持或非浏览器环境时返回 null。
+ */
 function getAudioContext() {
   if (typeof window === "undefined") {
     return null;
@@ -54,6 +57,9 @@ function getAudioContext() {
   return audioContext;
 }
 
+/**
+ * 按给定频率、时长和包络参数调度一个短音符，并接入指定增益节点。
+ */
 function scheduleTone(
   context: AudioContext,
   gainNode: GainNode,
@@ -85,6 +91,9 @@ function scheduleTone(
   osc.stop(start + duration + 0.025);
 }
 
+/**
+ * 根据摸牌、打牌、碰、杠、胡等动作播放对应的合成音效。
+ */
 export function playActionSound(action: ActionSound) {
   const context = getAudioContext();
   if (!context || !masterGain) {
@@ -176,6 +185,9 @@ export function playActionSound(action: ActionSound) {
   });
 }
 
+/**
+ * 注册首次用户交互解锁音频的监听器，避免浏览器自动播放限制导致无声。
+ */
 export function installAudioUnlock() {
   if (typeof window === "undefined" || unlockBound) {
     return;
@@ -183,6 +195,9 @@ export function installAudioUnlock() {
 
   unlockBound = true;
 
+  /**
+   * 在首次点击或按键后恢复音频上下文，并立即移除解锁监听。
+   */
   const unlock = () => {
     const context = getAudioContext();
     if (!context) {
@@ -199,6 +214,9 @@ export function installAudioUnlock() {
   window.addEventListener(WINDOW_EVENT.KEY_DOWN, unlock);
 }
 
+/**
+ * 调用浏览器语音合成朗读动作文案，优先选择中文语音。
+ */
 export function playActionVoice(voice: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
     return;

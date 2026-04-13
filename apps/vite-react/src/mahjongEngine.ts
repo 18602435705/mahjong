@@ -216,10 +216,22 @@ const TILE_TYPES: Tile[] = SUITS.flatMap((suit) =>
   Array.from({ length: 9 }, (_, index) => `${suit}${index + 1}` as Tile),
 );
 
+/**
+ * 将胡牌类型编码转换为界面展示文案。
+ */
 export const huTypeText = (type: HuType) => HU_TYPE_TEXT[type];
+/**
+ * 将叠加番型编码转换为界面展示文案。
+ */
 export const huOverlayText = (type: HuOverlayType) => HU_OVERLAY_TEXT[type];
+/**
+ * 将特殊胡牌标记（天胡/地胡）转换为界面展示文案。
+ */
 export const huSpecialText = (special: HuSpecialType) =>
   HU_SPECIAL_TEXT[special];
+/**
+ * 根据胡牌方式与特殊胡优先级返回最终展示文案。
+ */
 export const winMethodText = (
   method: WinMethod,
   specials: HuSpecialType[] = [],
@@ -232,12 +244,24 @@ export const winMethodText = (
   }
   return WIN_METHOD_TEXT[method];
 };
+/**
+ * 获取胡牌方式对应的附加番数。
+ */
 export const getMethodExtraFan = (method: WinMethod) =>
   METHOD_EXTRA_FAN[method];
+/**
+ * 获取单个特殊胡标记对应的附加番数。
+ */
 export const getSpecialExtraFan = (special: HuSpecialType) =>
   SPECIAL_EXTRA_FAN[special];
+/**
+ * 汇总多个特殊胡标记的附加番数。
+ */
 export const getSpecialsExtraFan = (specials: HuSpecialType[]) =>
   specials.reduce((sum, special) => sum + getSpecialExtraFan(special), 0);
+/**
+ * 生成胡牌摘要文案；若含清一色则与主胡型合并展示。
+ */
 export const huSummaryText = (hu: HuResult) => {
   const hasQingYiSe = hu.overlays.includes(HU_OVERLAY.QING_YI_SE);
 
@@ -259,6 +283,9 @@ export const huSummaryText = (hu: HuResult) => {
   return summary;
 };
 
+/**
+ * 将牌编码转换为中文牌面文本（如“3条”）。
+ */
 export const tileToText = (tile: Tile): string => {
   const suitLabel: Record<Suit, string> = {
     W: "万",
@@ -269,6 +296,9 @@ export const tileToText = (tile: Tile): string => {
   return `${tileRank(tile)}${suitLabel[tileSuit(tile)]}`;
 };
 
+/**
+ * 将副露类型转换为“碰/明杠/暗杠/补杠”文案。
+ */
 export const meldTypeText = (type: MeldType) => {
   if (type === MELD_TYPE.PENG) return "碰";
   if (type === MELD_TYPE.MING_GANG) return "明杠";
@@ -276,13 +306,22 @@ export const meldTypeText = (type: MeldType) => {
   return "补杠";
 };
 
+/**
+ * 创建新对局初始状态（第 1 局，四家 0 分）。
+ */
 export const createInitialGameState = () => createRoundState([0, 0, 0, 0], 1);
 
+/**
+ * 在吃碰杠胡响应阶段返回当前排队中的首个声明请求。
+ */
 export const getCurrentClaim = (state: GameState): ClaimRequest | null =>
   state.phase === PHASE.CLAIM_DECISION && state.pendingClaims.length > 0
     ? state.pendingClaims[0]
     : null;
 
+/**
+ * 在抢杠胡阶段返回当前轮到决策的候选玩家。
+ */
 export const getCurrentQiangGangCandidate = (
   state: GameState,
 ): number | null => {
@@ -293,10 +332,16 @@ export const getCurrentQiangGangCandidate = (
   return state.qiangGang.candidates[state.qiangGang.index] ?? null;
 };
 
+/**
+ * 判断胡牌结果是否为不含叠加番型的纯平胡。
+ */
 function isPingHuOnly(hu: HuResult) {
   return hu.type === "pinghu" && hu.overlays.length === 0;
 }
 
+/**
+ * 计算本次胡牌总番数，并拆分方式附加番与平胡保底番明细。
+ */
 export function calculateWinTotalFan(
   hu: HuResult,
   method: WinMethod,
@@ -318,6 +363,9 @@ export function calculateWinTotalFan(
   };
 }
 
+/**
+ * 判断是否满足“他家首轮自摸地胡”判定条件。
+ */
 function isDiHuSelfScenario(state: GameState, actor: number) {
   if (actor === 0) {
     return false;
@@ -332,6 +380,9 @@ function isDiHuSelfScenario(state: GameState, actor: number) {
   );
 }
 
+/**
+ * 判断是否满足“他家首轮点炮地胡”判定条件。
+ */
 function isDiHuClaimScenario(state: GameState, playerIndex: number) {
   if (playerIndex === 0) {
     return false;
@@ -346,12 +397,18 @@ function isDiHuClaimScenario(state: GameState, playerIndex: number) {
   );
 }
 
+/**
+ * 判断本局是否仍处于无人出牌、无人副露的开局纯净状态。
+ */
 function isRoundPristine(state: GameState) {
   return state.players.every(
     (player) => player.discards.length === 0 && player.melds.length === 0,
   );
 }
 
+/**
+ * 解析当前自摸可胡时的胡牌方式与特殊胡标记（杠上花/天胡/地胡）。
+ */
 function resolveSelfHuContext(
   state: GameState,
   actor: number,
@@ -392,6 +449,9 @@ function resolveSelfHuContext(
   };
 }
 
+/**
+ * 获取当前玩家自摸胡可用的胡牌方式；不可胡时返回 null。
+ */
 export function getSelfHuMethod(
   state: GameState,
   actor: number,
@@ -399,10 +459,16 @@ export function getSelfHuMethod(
   return resolveSelfHuContext(state, actor)?.method ?? null;
 }
 
+/**
+ * 获取当前玩家自摸胡可用的特殊胡标记集合。
+ */
 export function getSelfHuSpecials(state: GameState, actor: number) {
   return resolveSelfHuContext(state, actor)?.specials ?? [];
 }
 
+/**
+ * 汇总玩家回合可执行的操作选项（出牌、自摸、暗杠、补杠）。
+ */
 export const getHumanTurnOptions = (state: GameState) => {
   const human = state.players[0];
   const canAct = state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0;
@@ -422,6 +488,9 @@ export const getHumanTurnOptions = (state: GameState) => {
   };
 };
 
+/**
+ * 处理游戏 Action 并驱动完整状态流转。
+ */
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case GAME_ACTION.NEXT_ROUND: {
@@ -488,6 +557,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+/**
+ * 执行 AI 一步决策：响应声明、抢杠胡、自摸/杠判断与出牌选择。
+ */
 function runAIStep(state: GameState): GameState {
   if (state.phase === PHASE.GAME_OVER) {
     return state;
@@ -560,6 +632,9 @@ function runAIStep(state: GameState): GameState {
   return discardTile(state, actor, discard);
 }
 
+/**
+ * 创建单局状态：洗牌、发牌、庄家补张，并初始化回合信息。
+ */
 function createRoundState(scores: number[], round: number): GameState {
   const wall = createWall();
   const players: PlayerState[] = Array.from({ length: 4 }, (_, index) => ({
@@ -612,6 +687,9 @@ function createRoundState(scores: number[], round: number): GameState {
   return state;
 }
 
+/**
+ * 生成并随机打乱一副仅万条筒的牌墙。
+ */
 function createWall(): Tile[] {
   const wall: Tile[] = [];
 
@@ -629,6 +707,9 @@ function createWall(): Tile[] {
   return wall;
 }
 
+/**
+ * 执行出牌：移除手牌、记录弃牌、构建声明队列或推进到下一家回合。
+ */
 function discardTile(
   baseState: GameState,
   actor: number,
@@ -660,6 +741,9 @@ function discardTile(
   return enterTurn(state, nextPlayer(actor), true);
 }
 
+/**
+ * 按“胡 > 明杠 > 碰”优先级为弃牌构建可声明玩家队列。
+ */
 function buildClaimQueue(
   state: GameState,
   tile: Tile,
@@ -693,6 +777,9 @@ function buildClaimQueue(
   return [...hu, ...mingGang, ...peng];
 }
 
+/**
+ * 处理当前声明玩家选择“过”，并推进到下一个声明或下家摸牌。
+ */
 function passClaim(baseState: GameState): GameState {
   const state = cloneState(baseState);
   if (state.pendingClaims.length === 0) {
@@ -714,6 +801,9 @@ function passClaim(baseState: GameState): GameState {
   return enterTurn(state, nextPlayer(state.lastDiscard.from), true);
 }
 
+/**
+ * 执行声明通过逻辑（胡/明杠/碰）并更新局面与分数。
+ */
 function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
   if (claim.action === CLAIM_ACTION.HU) {
     const huResult = evaluateHu(
@@ -790,6 +880,9 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
   return state;
 }
 
+/**
+ * 尝试执行当前玩家自摸胡，成功时进入胡牌结算。
+ */
 function trySelfHu(baseState: GameState, actor: number): GameState {
   const selfHuContext = resolveSelfHuContext(baseState, actor);
   if (!selfHuContext) {
@@ -811,6 +904,9 @@ function trySelfHu(baseState: GameState, actor: number): GameState {
   });
 }
 
+/**
+ * 校验并执行暗杠，完成杠分结算后进入杠后摸牌。
+ */
 function tryAnGang(baseState: GameState, actor: number, tile: Tile): GameState {
   const state = cloneState(baseState);
   const player = state.players[actor];
@@ -839,6 +935,9 @@ function tryAnGang(baseState: GameState, actor: number, tile: Tile): GameState {
   return enterTurn(state, actor, true, DRAW_SOURCE.GANG);
 }
 
+/**
+ * 校验并尝试补杠；若存在抢杠胡候选则进入抢杠决策流程。
+ */
 function tryBuGang(baseState: GameState, actor: number, tile: Tile): GameState {
   if (
     baseState.phase !== PHASE.PLAYER_TURN ||
@@ -891,6 +990,9 @@ function tryBuGang(baseState: GameState, actor: number, tile: Tile): GameState {
   return executeBuGang(state, actor, tile);
 }
 
+/**
+ * 处理抢杠胡接受：校验可胡后按抢杠胡方式结算。
+ */
 function acceptQiangGangHu(baseState: GameState, winner: number): GameState {
   if (!baseState.qiangGang) {
     return baseState;
@@ -916,6 +1018,9 @@ function acceptQiangGangHu(baseState: GameState, winner: number): GameState {
   });
 }
 
+/**
+ * 处理当前候选玩家放弃抢杠胡，并推进到下一候选或执行补杠。
+ */
 function passQiangGangHu(baseState: GameState): GameState {
   if (baseState.phase !== PHASE.QIANG_GANG_DECISION || !baseState.qiangGang) {
     return baseState;
@@ -941,6 +1046,9 @@ function passQiangGangHu(baseState: GameState): GameState {
   return executeBuGang(state, actor, tile);
 }
 
+/**
+ * 正式执行补杠：将碰升级为补杠、结算杠分并摸杠后牌。
+ */
 function executeBuGang(
   baseState: GameState,
   actor: number,
@@ -975,6 +1083,9 @@ function executeBuGang(
   return enterTurn(state, actor, true, DRAW_SOURCE.GANG);
 }
 
+/**
+ * 按胡牌方式与番数结算输赢分，写入胜负信息并结束本局。
+ */
 function settleHu(
   baseState: GameState,
   options: {
@@ -1057,6 +1168,9 @@ function settleHu(
   return state;
 }
 
+/**
+ * 切换到指定玩家回合并按需摸牌；牌墙耗尽时判定流局结束。
+ */
 function enterTurn(
   baseState: GameState,
   playerIndex: number,
@@ -1098,11 +1212,17 @@ function enterTurn(
   return state;
 }
 
+/**
+ * 结算明杠分：放杠者向杠牌者单独支付。
+ */
 function settleMingGangScore(state: GameState, actor: number, from: number) {
   state.players[actor].score += GANG_SCORE.MING_GANG;
   state.players[from].score -= GANG_SCORE.MING_GANG;
 }
 
+/**
+ * 结算暗杠/补杠分：其余三家分别向杠牌者支付。
+ */
 function settleAnOrBuGangScore(
   state: GameState,
   actor: number,
@@ -1117,11 +1237,17 @@ function settleAnOrBuGangScore(
   }
 }
 
+/**
+ * 返回玩家当前可暗杠的牌列表（手中恰好四张）。
+ */
 function getAnGangOptions(player: PlayerState): Tile[] {
   const counts = countTiles(player.hand);
   return TILE_TYPES.filter((tile) => counts[tile] === 4);
 }
 
+/**
+ * 返回玩家当前可补杠的牌列表（已有碰且手中还有同牌）。
+ */
 function getBuGangOptions(player: PlayerState): Tile[] {
   return player.melds
     .filter((meld) => meld.type === MELD_TYPE.PENG)
@@ -1129,6 +1255,9 @@ function getBuGangOptions(player: PlayerState): Tile[] {
     .filter((tile) => countTile(player.hand, tile) >= 1);
 }
 
+/**
+ * 尝试按标准和牌结构（面子+将）评估可胡，并识别大对可能。
+ */
 function tryEvaluateStandardHu(hand: Tile[], melds: Meld[]) {
   const openMeldCount = melds.length;
   const meldNeed = 4 - openMeldCount;
@@ -1173,6 +1302,9 @@ function tryEvaluateStandardHu(hand: Tile[], melds: Meld[]) {
   };
 }
 
+/**
+ * 综合评估手牌胡型与番数，支持平胡、大对、小七及清一色叠加。
+ */
 export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   const sortedHand = [...hand];
   sortTiles(sortedHand);
@@ -1223,6 +1355,9 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   };
 }
 
+/**
+ * 判断是否构成小七对，并统计豪华小七所需的四张对子数量。
+ */
 function getXiaoQiInfo(hand: Tile[], melds: Meld[]) {
   if (melds.length > 0 || hand.length !== 14) {
     return {
@@ -1260,6 +1395,9 @@ function getXiaoQiInfo(hand: Tile[], melds: Meld[]) {
   };
 }
 
+/**
+ * 判断手牌与副露是否全部为同一花色。
+ */
 function isQingYiSe(hand: Tile[], melds: Meld[]) {
   const tiles = [...hand, ...melds.map((meld) => meld.tile)];
   if (tiles.length === 0) {
@@ -1270,9 +1408,15 @@ function isQingYiSe(hand: Tile[], melds: Meld[]) {
   return tiles.every((tile) => tileSuit(tile) === firstSuit);
 }
 
+/**
+ * 通过记忆化搜索判断剩余牌张能否拆成指定数量的顺子/刻子。
+ */
 function canFormMelds(counts: number[], meldNeed: number) {
   const memo = new Map<string, boolean>();
 
+  /**
+   * 递归尝试拆分刻子或顺子，作为 canFormMelds 的搜索核心。
+   */
   const dfs = (need: number): boolean => {
     if (need === 0) {
       return counts.every((value) => value === 0);
@@ -1331,6 +1475,9 @@ function canFormMelds(counts: number[], meldNeed: number) {
   return dfs(meldNeed);
 }
 
+/**
+ * 判断剩余牌是否可全部按刻子拆分（用于大对判定）。
+ */
 function canFormTripletsOnly(counts: number[], meldNeed: number) {
   const total = counts.reduce((sum, value) => sum + value, 0);
   if (total !== meldNeed * 3) {
@@ -1340,6 +1487,9 @@ function canFormTripletsOnly(counts: number[], meldNeed: number) {
   return counts.every((value) => value % 3 === 0);
 }
 
+/**
+ * 遍历手牌并选择启发式评分最高的一张作为 AI 出牌。
+ */
 function pickAIDiscard(player: PlayerState): Tile {
   const counts = countTiles(player.hand);
   let bestTile = player.hand[0];
@@ -1356,6 +1506,9 @@ function pickAIDiscard(player: PlayerState): Tile {
   return bestTile;
 }
 
+/**
+ * 按搭子关系、对子价值与边张特性计算 AI 出牌启发式分值。
+ */
 function evaluateDiscardScore(tile: Tile, counts: Record<Tile, number>) {
   const suit = tileSuit(tile);
   const rank = tileRank(tile);
@@ -1399,6 +1552,9 @@ function evaluateDiscardScore(tile: Tile, counts: Record<Tile, number>) {
   return score;
 }
 
+/**
+ * 将日志追加到顶部并截断到最大保留条数。
+ */
 function appendLog(state: GameState, message: string) {
   state.logs.unshift(message);
   if (state.logs.length > MAX_LOGS) {
@@ -1406,10 +1562,16 @@ function appendLog(state: GameState, message: string) {
   }
 }
 
+/**
+ * 获取当前玩家的下家索引。
+ */
 function nextPlayer(index: number) {
   return (index + 1) % 4;
 }
 
+/**
+ * 从手牌中移除指定数量的目标牌，并返回是否移除成功。
+ */
 function removeTiles(hand: Tile[], tile: Tile, count: number) {
   let remaining = count;
 
@@ -1426,6 +1588,9 @@ function removeTiles(hand: Tile[], tile: Tile, count: number) {
   return false;
 }
 
+/**
+ * 统计某张目标牌在手牌中的出现次数。
+ */
 function countTile(hand: Tile[], tile: Tile) {
   let count = 0;
   for (const item of hand) {
@@ -1436,6 +1601,9 @@ function countTile(hand: Tile[], tile: Tile) {
   return count;
 }
 
+/**
+ * 统计手牌中全部牌型的数量分布。
+ */
 function countTiles(hand: Tile[]) {
   const counts = Object.fromEntries(
     TILE_TYPES.map((tile) => [tile, 0]),
@@ -1448,6 +1616,9 @@ function countTiles(hand: Tile[]) {
   return counts;
 }
 
+/**
+ * 将手牌转换为 27 位计数数组，便于胡牌算法计算。
+ */
 function toCountArray(hand: Tile[]) {
   const counts = Array.from({ length: 27 }, () => 0);
 
@@ -1458,24 +1629,39 @@ function toCountArray(hand: Tile[]) {
   return counts;
 }
 
+/**
+ * 提取牌编码的花色部分。
+ */
 function tileSuit(tile: Tile): Suit {
   return tile[0] as Suit;
 }
 
+/**
+ * 提取牌编码的数字点数部分。
+ */
 function tileRank(tile: Tile): number {
   return Number(tile.slice(1));
 }
 
+/**
+ * 将牌编码映射为 0-26 的顺序索引。
+ */
 function tileIndex(tile: Tile): number {
   const suitOffset =
     tileSuit(tile) === SUIT.WAN ? 0 : tileSuit(tile) === SUIT.BAMBOO ? 9 : 18;
   return suitOffset + tileRank(tile) - 1;
 }
 
+/**
+ * 按统一索引规则对牌数组原地排序。
+ */
 function sortTiles(tiles: Tile[]) {
   tiles.sort((a, b) => tileIndex(a) - tileIndex(b));
 }
 
+/**
+ * 深拷贝游戏状态，保证 reducer 更新过程不直接改动原状态。
+ */
 function cloneState(state: GameState): GameState {
   return structuredClone(state);
 }

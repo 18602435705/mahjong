@@ -42,6 +42,9 @@ import {
   type WinMethod,
 } from "./mahjongEngine";
 
+/**
+ * 比较前后状态的副露列表，找出本次状态更新中新出现或发生变化的副露。
+ */
 function detectMeldChange(
   prevState: GameState,
   nextState: GameState,
@@ -78,6 +81,9 @@ const WINDOW_EVENT = {
   KEY_DOWN: "keydown",
 } as const;
 
+/**
+ * 将牌编码转换为语音播报文本（如“一万”“九筒”）。
+ */
 function tileToVoiceText(tile: Tile) {
   const suit = tile[0];
   const rank = Number(tile.slice(1));
@@ -87,6 +93,9 @@ function tileToVoiceText(tile: Tile) {
   return `${numberText}${suitText}`;
 }
 
+/**
+ * 比较前后状态的弃牌区，识别本次新增的弃牌。
+ */
 function detectDiscardedTile(
   prevState: GameState,
   nextState: GameState,
@@ -102,6 +111,9 @@ function detectDiscardedTile(
   return null;
 }
 
+/**
+ * 根据状态变化推断需要播报的语音内容（胡牌、副露或打牌）。
+ */
 function detectActionVoice(prevState: GameState, nextState: GameState) {
   if (prevState.round !== nextState.round) {
     return null;
@@ -150,6 +162,9 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
   return null;
 }
 
+/**
+ * 麻将对局主界面组件，负责状态驱动渲染、AI 调度、语音播报与玩家操作入口。
+ */
 function App() {
   const [state, dispatch] = useReducer(
     gameReducer,
@@ -225,6 +240,9 @@ function App() {
       return;
     }
 
+    /**
+     * 监听点击外部区域以关闭悬浮菜单。
+     */
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) {
@@ -238,6 +256,9 @@ function App() {
       setMenuOpen(false);
     };
 
+    /**
+     * 监听 Esc 键以关闭悬浮菜单。
+     */
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === KEYBOARD.ESCAPE) {
         setMenuOpen(false);
@@ -325,6 +346,9 @@ function App() {
     (state.phase === PHASE.CLAIM_DECISION && currentClaim?.player === 0) ||
     (state.phase === PHASE.QIANG_GANG_DECISION && qiangGangCandidate === 0);
 
+  /**
+   * 处理玩家手牌点击：首次选中，二次点击同牌时执行出牌。
+   */
   const handleHumanTileClick = (tile: Tile, index: number) => {
     if (!humanOptions.canDiscard) {
       return;
@@ -627,6 +651,9 @@ type PlayerSeatProps = {
   onTileClick?: (tile: Tile, index: number) => void;
 };
 
+/**
+ * 渲染单个座位的玩家信息、手牌/暗牌、副露与动效表现。
+ */
 function PlayerSeat(props: PlayerSeatProps) {
   const {
     title,
@@ -863,6 +890,9 @@ type DiscardFlightState = {
 const DISCARD_FLIGHT_HOLD_MS = 420;
 const DISCARD_FLIGHT_TOTAL_MS = 1080;
 
+/**
+ * 渲染中央弃牌区与牌墙剩余，并驱动弃牌飞入动画。
+ */
 function DiscardPool({ state, wallCount }: DiscardPoolProps) {
   const prefersReducedMotion = useReducedMotion();
   const previousDiscardLengthsRef = useRef<number[] | null>(null);
@@ -944,6 +974,9 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
     };
   }, [flight]);
 
+  /**
+   * 判断某张弃牌是否为当前飞行动画对应的目标牌。
+   */
   const isFlightTarget = (
     playerIndex: number,
     discardIndex: number,
@@ -954,6 +987,9 @@ function DiscardPool({ state, wallCount }: DiscardPoolProps) {
     flight.discardIndex === discardIndex &&
     flight.tile === tile;
 
+  /**
+   * 渲染指定方位玩家的弃牌列，并处理动画牌的占位与落位。
+   */
   const renderLane = (key: LaneKey, playerIndex: number) => {
     const player = state.players[playerIndex];
     return (

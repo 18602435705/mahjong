@@ -85,6 +85,9 @@ const TONG_PIP_COLORS = [
   "#29487f",
 ];
 
+/**
+ * 按牌点位布局生成筒子牌中心圆点图案。
+ */
 function drawTong(rank: number) {
   const layout = PIP_LAYOUT[rank] ?? [];
 
@@ -107,6 +110,9 @@ function drawTong(rank: number) {
   });
 }
 
+/**
+ * 按牌点位布局生成条子牌中心竹节图案。
+ */
 function drawBamboo(rank: number) {
   const layout = PIP_LAYOUT[rank] ?? [];
   const stemColors = ["#2f7a4d", "#347f50", "#2a6f45"];
@@ -135,6 +141,9 @@ function drawBamboo(rank: number) {
   });
 }
 
+/**
+ * 绘制万子牌中心的中文数字与“萬”字。
+ */
 function drawCharacter(rank: number) {
   return (
     <>
@@ -164,6 +173,9 @@ function drawCharacter(rank: number) {
   );
 }
 
+/**
+ * 根据牌花色选择并渲染对应的中心图案。
+ */
 function drawCenter(tile: Tile, rank: number) {
   if (tile.startsWith(SUIT.WAN)) {
     return drawCharacter(rank);
@@ -176,6 +188,9 @@ function drawCenter(tile: Tile, rank: number) {
   return drawTong(rank);
 }
 
+/**
+ * 渲染单张麻将牌的 SVG（正面或背面），并支持不同尺寸样式。
+ */
 function TileAsset(props: TileAssetProps) {
   const {
     tile = `${SUIT.WAN}1` as Tile,
