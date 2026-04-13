@@ -29,14 +29,9 @@ export type HuType =
   | "haohua"
   | "shuanghaohua"
   | "sanhaohua";
-export type HuOverlayType = "qingyise" | "dandiao";
-export type WinMethod =
-  | "zimo"
-  | "dianpao"
-  | "qianggang"
-  | "gangshanghua"
-  | "tianhu"
-  | "dihu";
+export type HuOverlayType = "qingyise";
+export type WinMethod = "zimo" | "dianpao" | "qianggang" | "gangshanghua";
+export type HuSpecialType = "tianhu" | "dihu";
 
 export interface HuResult {
   type: HuType;
@@ -50,6 +45,7 @@ export interface WinInfo {
   winner: number;
   from?: number;
   method: WinMethod;
+  specials: HuSpecialType[];
   hu: HuResult;
   totalFan: number;
   tile: Tile;
@@ -114,11 +110,10 @@ const HU_TYPE_TEXT: Record<HuType, string> = {
 
 const HU_OVERLAY_TEXT: Record<HuOverlayType, string> = {
   qingyise: "清一色",
-  dandiao: "单钓",
 };
 
 const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
-  pinghu: 3,
+  pinghu: 0,
   dadui: 8,
   dasanyuan: 20,
   xiaoqi: 10,
@@ -129,7 +124,6 @@ const BASE_FAN_BY_HU_TYPE: Record<HuType, number> = {
 
 const OVERLAY_FAN_BY_TYPE: Record<HuOverlayType, number> = {
   qingyise: 12,
-  dandiao: 15,
 };
 
 const WIN_METHOD_TEXT: Record<WinMethod, string> = {
@@ -137,6 +131,9 @@ const WIN_METHOD_TEXT: Record<WinMethod, string> = {
   dianpao: "点炮胡",
   qianggang: "抢杠胡",
   gangshanghua: "杠上花",
+};
+
+const HU_SPECIAL_TEXT: Record<HuSpecialType, string> = {
   tianhu: "天胡",
   dihu: "地胡",
 };
@@ -146,9 +143,10 @@ const METHOD_EXTRA_FAN: Record<WinMethod, number> = {
   dianpao: 0,
   qianggang: 0,
   gangshanghua: 0,
-  // 按新规则：天胡额外加 20 番。
+};
+
+const SPECIAL_EXTRA_FAN: Record<HuSpecialType, number> = {
   tianhu: 20,
-  // 按新规则：地胡额外加 20 番。
   dihu: 20,
 };
 
@@ -160,12 +158,28 @@ const TILE_TYPES: Tile[] = SUITS.flatMap((suit) =>
 
 export const huTypeText = (type: HuType) => HU_TYPE_TEXT[type];
 export const huOverlayText = (type: HuOverlayType) => HU_OVERLAY_TEXT[type];
-export const winMethodText = (method: WinMethod) => WIN_METHOD_TEXT[method];
+export const huSpecialText = (special: HuSpecialType) =>
+  HU_SPECIAL_TEXT[special];
+export const winMethodText = (
+  method: WinMethod,
+  specials: HuSpecialType[] = [],
+) => {
+  if (specials.includes("tianhu")) {
+    return huSpecialText("tianhu");
+  }
+  if (specials.includes("dihu")) {
+    return huSpecialText("dihu");
+  }
+  return WIN_METHOD_TEXT[method];
+};
 export const getMethodExtraFan = (method: WinMethod) =>
   METHOD_EXTRA_FAN[method];
+export const getSpecialExtraFan = (special: HuSpecialType) =>
+  SPECIAL_EXTRA_FAN[special];
+export const getSpecialsExtraFan = (specials: HuSpecialType[]) =>
+  specials.reduce((sum, special) => sum + getSpecialExtraFan(special), 0);
 export const huSummaryText = (hu: HuResult) => {
   const hasQingYiSe = hu.overlays.includes("qingyise");
-  const hasDanDiao = hu.overlays.includes("dandiao");
 
   let summary = huTypeText(hu.type);
   if (hasQingYiSe) {
@@ -179,10 +193,6 @@ export const huSummaryText = (hu: HuResult) => {
       sanhaohua: "清一色三豪华",
     };
     summary = qingYiSeByType[hu.type];
-  }
-
-  if (hasDanDiao) {
-    return `${summary}单钓`;
   }
 
   return summary;
@@ -226,6 +236,27 @@ function isPingHuOnly(hu: HuResult) {
   return hu.type === "pinghu" && hu.overlays.length === 0;
 }
 
+export function calculateWinTotalFan(
+  hu: HuResult,
+  method: WinMethod,
+  specials: HuSpecialType[] = [],
+) {
+  const methodExtraFan = getMethodExtraFan(method);
+  const specialExtraFan = getSpecialsExtraFan(specials);
+  const purePingHuBaseFan = hu.baseFan + hu.overlayFan + specialExtraFan;
+  const pingHuDefaultMethodFan =
+    isPingHuOnly(hu) && purePingHuBaseFan === 0 ? 3 : 0;
+  const totalFan =
+    hu.fan + methodExtraFan + specialExtraFan + pingHuDefaultMethodFan;
+
+  return {
+    totalFan,
+    methodExtraFan,
+    specialExtraFan,
+    pingHuDefaultMethodFan,
+  };
+}
+
 function isDiHuSelfScenario(state: GameState, actor: number) {
   if (actor === 0) {
     return false;
@@ -260,10 +291,10 @@ function isRoundPristine(state: GameState) {
   );
 }
 
-export function getSelfHuMethod(
+function resolveSelfHuContext(
   state: GameState,
   actor: number,
-): WinMethod | null {
+): { method: WinMethod; specials: HuSpecialType[] } | null {
   if (state.phase !== "playerTurn" || state.currentPlayer !== actor) {
     return null;
   }
@@ -274,18 +305,41 @@ export function getSelfHuMethod(
   }
 
   if (player.justDrawnFromGang) {
-    return "gangshanghua";
+    return {
+      method: "gangshanghua",
+      specials: [],
+    };
   }
 
   if (actor === 0 && isRoundPristine(state)) {
-    return "tianhu";
+    return {
+      method: "zimo",
+      specials: ["tianhu"],
+    };
   }
 
   if (isDiHuSelfScenario(state, actor)) {
-    return "dihu";
+    return {
+      method: "zimo",
+      specials: ["dihu"],
+    };
   }
 
-  return "zimo";
+  return {
+    method: "zimo",
+    specials: [],
+  };
+}
+
+export function getSelfHuMethod(
+  state: GameState,
+  actor: number,
+): WinMethod | null {
+  return resolveSelfHuContext(state, actor)?.method ?? null;
+}
+
+export function getSelfHuSpecials(state: GameState, actor: number) {
+  return resolveSelfHuContext(state, actor)?.specials ?? [];
 }
 
 export const getHumanTurnOptions = (state: GameState) => {
@@ -295,11 +349,13 @@ export const getHumanTurnOptions = (state: GameState) => {
     canAct && human.justDrawnTile !== null && human.hand.length % 3 === 2;
   const selfHu = canUseDrawActions ? evaluateHu(human.hand, human.melds) : null;
   const selfHuMethod = selfHu ? getSelfHuMethod(state, 0) : null;
+  const selfHuSpecials = selfHu ? getSelfHuSpecials(state, 0) : [];
 
   return {
     canDiscard: canAct,
     selfHu,
     selfHuMethod,
+    selfHuSpecials,
     anGangTiles: canUseDrawActions ? getAnGangOptions(human) : [],
     buGangTiles: canUseDrawActions ? getBuGangOptions(human) : [],
   };
@@ -414,10 +470,11 @@ function runAIStep(state: GameState): GameState {
   if (canUseDrawActions) {
     const selfHu = evaluateHu(player.hand, player.melds);
     if (selfHu) {
-      const method = getSelfHuMethod(state, actor) ?? "zimo";
+      const selfHuContext = resolveSelfHuContext(state, actor);
       return settleHu(state, {
         winner: actor,
-        method,
+        method: selfHuContext?.method ?? "zimo",
+        specials: selfHuContext?.specials ?? [],
         tile: player.hand[player.hand.length - 1],
         hu: selfHu,
       });
@@ -613,7 +670,8 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
     return settleHu(baseState, {
       winner: claim.player,
       from: claim.from,
-      method: diHuClaim ? "dihu" : "dianpao",
+      method: "dianpao",
+      specials: diHuClaim ? ["dihu"] : [],
       tile: claim.tile,
       hu: huResult,
     });
@@ -664,8 +722,8 @@ function acceptClaim(baseState: GameState, claim: ClaimRequest): GameState {
 }
 
 function trySelfHu(baseState: GameState, actor: number): GameState {
-  const method = getSelfHuMethod(baseState, actor);
-  if (!method) {
+  const selfHuContext = resolveSelfHuContext(baseState, actor);
+  if (!selfHuContext) {
     return baseState;
   }
 
@@ -677,7 +735,8 @@ function trySelfHu(baseState: GameState, actor: number): GameState {
 
   return settleHu(baseState, {
     winner: actor,
-    method,
+    method: selfHuContext.method,
+    specials: selfHuContext.specials,
     tile: player.hand[player.hand.length - 1],
     hu,
   });
@@ -777,6 +836,7 @@ function acceptQiangGangHu(baseState: GameState, winner: number): GameState {
     winner,
     from: actor,
     method: "qianggang",
+    specials: [],
     tile,
     hu,
   });
@@ -847,33 +907,36 @@ function settleHu(
     winner: number;
     from?: number;
     method: WinMethod;
+    specials?: HuSpecialType[];
     tile: Tile;
     hu: HuResult;
   },
 ): GameState {
   const state = cloneState(baseState);
-  const { winner, from, method, tile, hu } = options;
-  const methodExtraFan = getMethodExtraFan(method);
-  const isDiHuPingHuFixed = method === "dihu" && isPingHuOnly(hu);
-  const isTianHuPingHuFixed = method === "tianhu" && isPingHuOnly(hu);
-  const fixedRuleText = isTianHuPingHuFixed
-    ? "天胡平胡特判"
-    : isDiHuPingHuFixed
-      ? "地胡平胡特判"
-      : "";
-  const totalFan =
-    fixedRuleText !== "" ? methodExtraFan : hu.fan + methodExtraFan;
+  const { winner, from, method, specials = [], tile, hu } = options;
+  const { totalFan, methodExtraFan, pingHuDefaultMethodFan } =
+    calculateWinTotalFan(hu, method, specials);
+  const methodBonusParts: string[] = [];
+  if (methodExtraFan > 0) {
+    methodBonusParts.push(`${WIN_METHOD_TEXT[method]} ${methodExtraFan} 番`);
+  }
+  if (pingHuDefaultMethodFan > 0) {
+    methodBonusParts.push(`平胡默认 ${pingHuDefaultMethodFan} 番`);
+  }
+  for (const special of specials) {
+    const specialFan = getSpecialExtraFan(special);
+    if (specialFan > 0) {
+      methodBonusParts.push(`${huSpecialText(special)} ${specialFan} 番`);
+    }
+  }
   const methodBonusText =
-    methodExtraFan > 0 ? ` + ${winMethodText(method)} ${methodExtraFan} 番` : "";
-  const fanDetailText =
-    fixedRuleText !== ""
-      ? `${huSummaryText(hu)}（${fixedRuleText}）${totalFan} 番`
-      : `${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}`;
+    methodBonusParts.length > 0 ? ` + ${methodBonusParts.join(" + ")}` : "";
+  const fanDetailText = `${huSummaryText(hu)} ${hu.fan} 番${methodBonusText}`;
   const isSelfPayAll =
     method === "zimo" ||
     method === "gangshanghua" ||
-    method === "tianhu" ||
-    (method === "dihu" && typeof from !== "number");
+    specials.includes("tianhu") ||
+    (specials.includes("dihu") && typeof from !== "number");
 
   if (isSelfPayAll) {
     for (let i = 0; i < state.players.length; i += 1) {
@@ -886,7 +949,7 @@ function settleHu(
 
     appendLog(
       state,
-      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${fanDetailText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method, specials)} ${tileToText(tile)}（${fanDetailText}），共 ${totalFan} 番，三家各付 ${totalFan} 分`,
     );
   } else if (typeof from === "number") {
     state.players[from].score -= totalFan;
@@ -894,7 +957,7 @@ function settleHu(
 
     appendLog(
       state,
-      `${state.players[winner].name} ${winMethodText(method)} ${tileToText(tile)}（${fanDetailText}），${state.players[from].name} 付 ${totalFan} 分`,
+      `${state.players[winner].name} ${winMethodText(method, specials)} ${tileToText(tile)}（${fanDetailText}），${state.players[from].name} 付 ${totalFan} 分`,
     );
 
     state.players[winner].hand.push(tile);
@@ -908,6 +971,7 @@ function settleHu(
     winner,
     from,
     method,
+    specials,
     hu,
     totalFan,
     tile,
@@ -1061,9 +1125,6 @@ export function evaluateHu(hand: Tile[], melds: Meld[]): HuResult | null {
   if (isQingYiSe(sortedHand, melds)) {
     overlays.push("qingyise");
   }
-  if (isDanDiaoWin(sortedHand)) {
-    overlays.push("dandiao");
-  }
 
   const baseFan = BASE_FAN_BY_HU_TYPE[type];
   const overlayFan = overlays.reduce(
@@ -1125,10 +1186,6 @@ function isQingYiSe(hand: Tile[], melds: Meld[]) {
 
   const firstSuit = tileSuit(tiles[0]);
   return tiles.every((tile) => tileSuit(tile) === firstSuit);
-}
-
-function isDanDiaoWin(hand: Tile[]) {
-  return hand.length === 2 && hand[0] === hand[1];
 }
 
 function canFormMelds(counts: number[], meldNeed: number) {

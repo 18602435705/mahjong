@@ -16,9 +16,10 @@ import "./App.css";
 import { installAudioUnlock, playActionVoice } from "./actionAudio";
 import TileAsset from "./TileAsset";
 import {
+  calculateWinTotalFan,
   createInitialGameState,
-  getMethodExtraFan,
   getSelfHuMethod,
+  getSelfHuSpecials,
   gameReducer,
   getCurrentClaim,
   getCurrentQiangGangCandidate,
@@ -30,6 +31,7 @@ import {
   type GameState,
   type Meld,
   type Tile,
+  type HuSpecialType,
   type WinMethod,
 } from "./mahjongEngine";
 
@@ -92,14 +94,14 @@ function detectActionVoice(prevState: GameState, nextState: GameState) {
 
   if (!prevState.winInfo && nextState.winInfo) {
     const tileText = tileToVoiceText(nextState.winInfo.tile);
-    if (nextState.winInfo.method === "zimo") {
-      return `自摸 ${tileText}`;
-    }
-    if (nextState.winInfo.method === "tianhu") {
+    if (nextState.winInfo.specials.includes("tianhu")) {
       return `天胡 ${tileText}`;
     }
-    if (nextState.winInfo.method === "dihu") {
+    if (nextState.winInfo.specials.includes("dihu")) {
       return `地胡 ${tileText}`;
+    }
+    if (nextState.winInfo.method === "zimo") {
+      return `自摸 ${tileText}`;
     }
     if (nextState.winInfo.method === "gangshanghua") {
       return `杠上花 ${tileText}`;
@@ -241,7 +243,10 @@ function App() {
       }
 
       const winner = state.players[state.winInfo.winner].name;
-      const methodText = winMethodText(state.winInfo.method);
+      const methodText = winMethodText(
+        state.winInfo.method,
+        state.winInfo.specials,
+      );
       const huSummary = huSummaryText(state.winInfo.hu);
       const payer =
         typeof state.winInfo.from === "number"
@@ -283,6 +288,8 @@ function App() {
   const humanHandSignature = state.players[0].hand.join("|");
   const humanSelfHuMethod: WinMethod =
     humanOptions.selfHuMethod ?? getSelfHuMethod(state, 0) ?? "zimo";
+  const humanSelfHuSpecials: HuSpecialType[] =
+    humanOptions.selfHuSpecials ?? getSelfHuSpecials(state, 0);
 
   const activeSelectedDiscardKey =
     humanOptions.canDiscard &&
@@ -410,11 +417,17 @@ function App() {
                       type="button"
                       onClick={() => dispatch({ type: "HUMAN_SELF_HU" })}
                     >
-                      {`${winMethodText(humanSelfHuMethod)}（${huSummaryText(
+                      {`${winMethodText(
+                        humanSelfHuMethod,
+                        humanSelfHuSpecials,
+                      )}（${huSummaryText(
                         humanOptions.selfHu,
                       )} ${
-                        humanOptions.selfHu.fan +
-                        getMethodExtraFan(humanSelfHuMethod)
+                        calculateWinTotalFan(
+                          humanOptions.selfHu,
+                          humanSelfHuMethod,
+                          humanSelfHuSpecials,
+                        ).totalFan
                       } 番）`}
                     </button>
                   )}
