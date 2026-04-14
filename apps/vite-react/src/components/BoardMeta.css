@@ -103,6 +103,43 @@
   max-width: clamp(220px, 62vw, 520px);
 }
 
+.preset-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(197, 153, 88, 0.62);
+  background: linear-gradient(
+    150deg,
+    rgba(247, 230, 200, 0.94),
+    rgba(232, 207, 166, 0.92)
+  );
+}
+
+.preset-label {
+  color: #5b3920;
+  font-size: clamp(0.52rem, 1.02vw, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.preset-select {
+  border: 1px solid rgba(152, 111, 67, 0.72);
+  border-radius: 999px;
+  padding: 2px 8px;
+  min-width: clamp(118px, 16vw, 170px);
+  color: #4a2f1a;
+  background: rgba(255, 248, 233, 0.94);
+  font-size: clamp(0.52rem, 1.02vw, 0.68rem);
+  font-family: var(--font-ui);
+}
+
+.preset-select:focus {
+  outline: 2px solid rgba(186, 145, 86, 0.58);
+  outline-offset: 1px;
+}
+
 .meta-chip {
   width: fit-content;
   padding: 4px 9px;

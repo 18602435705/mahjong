@@ -1,3 +1,16 @@
+import {
+  INITIAL_DEAL_PRESET,
+  INITIAL_DEAL_PRESET_CONFIG,
+  INITIAL_DEAL_PRESET_OPTIONS,
+} from "./mock/initialDealPresets";
+import type { InitialDealPresetId } from "./mock/initialDealPresets";
+
+export { INITIAL_DEAL_PRESET, INITIAL_DEAL_PRESET_OPTIONS };
+export type {
+  InitialDealPresetId,
+  InitialDealPresetOption,
+} from "./mock/initialDealPresets";
+
 export const SUIT = {
   WAN: "W",
   BAMBOO: "T",
@@ -132,8 +145,8 @@ export const GAME_ACTION = {
 } as const;
 
 export type GameAction =
-  | { type: typeof GAME_ACTION.NEXT_ROUND }
-  | { type: typeof GAME_ACTION.RESET_GAME }
+  | { type: typeof GAME_ACTION.NEXT_ROUND; presetId?: InitialDealPresetId }
+  | { type: typeof GAME_ACTION.RESET_GAME; presetId?: InitialDealPresetId }
   | { type: typeof GAME_ACTION.HUMAN_DISCARD; tile: Tile }
   | { type: typeof GAME_ACTION.HUMAN_SELF_HU }
   | { type: typeof GAME_ACTION.HUMAN_GANG; gangType: HumanGangType; tile: Tile }
@@ -309,7 +322,9 @@ export const meldTypeText = (type: MeldType) => {
 /**
  * 创建新对局初始状态（第 1 局，四家 0 分）。
  */
-export const createInitialGameState = () => createRoundState([0, 0, 0, 0], 1);
+export const createInitialGameState = (
+  presetId: InitialDealPresetId = INITIAL_DEAL_PRESET.RANDOM,
+) => createRoundState([0, 0, 0, 0], 1, presetId);
 
 /**
  * 在吃碰杠胡响应阶段返回当前排队中的首个声明请求。
@@ -495,10 +510,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case GAME_ACTION.NEXT_ROUND: {
       const scores = state.players.map((player) => player.score);
-      return createRoundState(scores, state.round + 1);
+      const presetId = action.presetId ?? INITIAL_DEAL_PRESET.RANDOM;
+      return createRoundState(scores, state.round + 1, presetId);
     }
     case GAME_ACTION.RESET_GAME: {
-      return createRoundState([0, 0, 0, 0], 1);
+      const presetId = action.presetId ?? INITIAL_DEAL_PRESET.RANDOM;
+      return createRoundState([0, 0, 0, 0], 1, presetId);
     }
     case GAME_ACTION.HUMAN_DISCARD: {
       if (state.phase !== PHASE.PLAYER_TURN || state.currentPlayer !== 0) {
@@ -635,19 +652,24 @@ function runAIStep(state: GameState): GameState {
 /**
  * 创建单局状态：洗牌、发牌、庄家补张，并初始化回合信息。
  */
-function createRoundState(scores: number[], round: number): GameState {
+function createRoundState(
+  scores: number[],
+  round: number,
+  presetId: InitialDealPresetId = INITIAL_DEAL_PRESET.RANDOM,
+): GameState {
+  if (presetId !== INITIAL_DEAL_PRESET.RANDOM) {
+    return createPresetRoundState(scores, round, presetId);
+  }
+
+  return createRandomRoundState(scores, round);
+}
+
+/**
+ * 创建随机发牌单局状态。
+ */
+function createRandomRoundState(scores: number[], round: number): GameState {
+  const players = createPlayers(scores);
   const wall = createWall();
-  const players: PlayerState[] = Array.from({ length: 4 }, (_, index) => ({
-    id: index,
-    name: PLAYER_NAMES[index],
-    isHuman: index === 0,
-    hand: [],
-    justDrawnTile: null,
-    justDrawnFromGang: false,
-    melds: [],
-    discards: [],
-    score: scores[index] ?? 0,
-  }));
 
   for (let i = 0; i < 13; i += 1) {
     for (const player of players) {
@@ -685,6 +707,107 @@ function createRoundState(scores: number[], round: number): GameState {
   appendLog(state, `第 ${round} 局开始，庄家是${players[0].name}`);
 
   return state;
+}
+
+/**
+ * 创建预设发牌单局状态，用于快速复现测试场景。
+ */
+function createPresetRoundState(
+  scores: number[],
+  round: number,
+  presetId: Exclude<InitialDealPresetId, typeof INITIAL_DEAL_PRESET.RANDOM>,
+): GameState {
+  const preset = INITIAL_DEAL_PRESET_CONFIG[presetId];
+  const players = createPlayers(scores);
+
+  players.forEach((player, index) => {
+    player.hand = [...preset.hands[index]];
+    sortTiles(player.hand);
+  });
+
+  const humanJustDrawnTile =
+    preset.humanJustDrawnTile ?? players[0].hand[players[0].hand.length - 1] ?? null;
+  players[0].justDrawnTile = humanJustDrawnTile;
+
+  const wall = createWallFromPreset(preset.hands, preset.wallDrawSequence ?? []);
+
+  const state: GameState = {
+    players,
+    wall,
+    currentPlayer: 0,
+    phase: PHASE.PLAYER_TURN,
+    pendingClaims: [],
+    qiangGang: null,
+    lastDiscard: null,
+    logs: [],
+    round,
+    winner: null,
+    winInfo: null,
+  };
+
+  const presetLabel =
+    INITIAL_DEAL_PRESET_OPTIONS.find((option) => option.id === presetId)?.label ??
+    presetId;
+  appendLog(state, `第 ${round} 局开始（预设：${presetLabel}），庄家是${players[0].name}`);
+
+  return state;
+}
+
+/**
+ * 按积分创建四家玩家基础状态。
+ */
+function createPlayers(scores: number[]) {
+  const players: PlayerState[] = Array.from({ length: 4 }, (_, index) => ({
+    id: index,
+    name: PLAYER_NAMES[index],
+    isHuman: index === 0,
+    hand: [],
+    justDrawnTile: null,
+    justDrawnFromGang: false,
+    melds: [],
+    discards: [],
+    score: scores[index] ?? 0,
+  }));
+
+  return players;
+}
+
+/**
+ * 基于预设手牌扣减牌张并组装剩余牌墙，可指定后续摸牌序列。
+ */
+function createWallFromPreset(
+  hands: [Tile[], Tile[], Tile[], Tile[]],
+  drawSequence: Tile[],
+) {
+  const counts: Record<Tile, number> = Object.fromEntries(
+    TILE_TYPES.map((tile) => [tile, 4]),
+  ) as Record<Tile, number>;
+
+  const allUsed = hands.flat();
+  for (const tile of allUsed) {
+    counts[tile] -= 1;
+    if (counts[tile] < 0) {
+      throw new Error(`预设手牌超出牌张上限：${tile}`);
+    }
+  }
+
+  for (const tile of drawSequence) {
+    counts[tile] -= 1;
+    if (counts[tile] < 0) {
+      throw new Error(`预设摸牌序列超出牌张上限：${tile}`);
+    }
+  }
+
+  const wallBody: Tile[] = [];
+  for (const tile of TILE_TYPES) {
+    const count = counts[tile];
+    for (let index = 0; index < count; index += 1) {
+      wallBody.push(tile);
+    }
+  }
+
+  const wallTail = [...drawSequence].reverse();
+  return [...wallBody, ...wallTail];
 }
 
 /**

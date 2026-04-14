@@ -13,6 +13,9 @@ import {
   createInitialGameState,
   GAME_ACTION,
   gameReducer,
+  INITIAL_DEAL_PRESET,
+  INITIAL_DEAL_PRESET_OPTIONS,
+  type InitialDealPresetId,
 } from "./mahjongEngine";
 
 /**
@@ -26,6 +29,9 @@ function App() {
   );
   const menuRef = useRef<HTMLDetailsElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<InitialDealPresetId>(
+    INITIAL_DEAL_PRESET.RANDOM,
+  );
   const {
     statusText,
     humanOptions,
@@ -52,13 +58,19 @@ function App() {
         menuOpen={menuOpen}
         round={state.round}
         statusText={statusText}
+        presetOptions={INITIAL_DEAL_PRESET_OPTIONS}
+        selectedPresetId={selectedPresetId}
+        onPresetChange={(presetId) => {
+          setSelectedPresetId(presetId);
+          dispatch({ type: GAME_ACTION.RESET_GAME, presetId });
+        }}
         onToggleMenu={() => setMenuOpen((current) => !current)}
         onNextRound={() => {
-          dispatch({ type: GAME_ACTION.NEXT_ROUND });
+          dispatch({ type: GAME_ACTION.NEXT_ROUND, presetId: selectedPresetId });
           setMenuOpen(false);
         }}
         onResetGame={() => {
-          dispatch({ type: GAME_ACTION.RESET_GAME });
+          dispatch({ type: GAME_ACTION.RESET_GAME, presetId: selectedPresetId });
           setMenuOpen(false);
         }}
       />

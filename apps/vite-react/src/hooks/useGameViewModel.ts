@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState, type Dispatch } from "react";
 import {
-  calculateWinTotalFan,
   CLAIM_ACTION,
   GAME_ACTION,
   getCurrentClaim,
@@ -32,9 +31,8 @@ export function useGameViewModel(
   state: GameState,
   dispatch: Dispatch<GameAction>,
 ) {
-  const [selectedDiscard, setSelectedDiscard] = useState<SelectedDiscard | null>(
-    null,
-  );
+  const [selectedDiscard, setSelectedDiscard] =
+    useState<SelectedDiscard | null>(null);
 
   const humanOptions = useMemo(() => getHumanTurnOptions(state), [state]);
   const currentClaim = useMemo(() => getCurrentClaim(state), [state]);
@@ -55,21 +53,11 @@ export function useGameViewModel(
         state.winInfo.specials,
       );
       const huSummary = huSummaryText(state.winInfo.hu);
-      const winFanDetail = calculateWinTotalFan(
-        state.winInfo.hu,
-        state.winInfo.method,
-        state.winInfo.specials,
-      );
-      const displayedHandFan =
-        state.winInfo.hu.fan + winFanDetail.pingHuDefaultMethodFan;
       const payer =
         typeof state.winInfo.from === "number"
           ? `，由 ${state.players[state.winInfo.from].name} 付分`
           : "";
-      const handFanText =
-        winFanDetail.pingHuDefaultMethodFan > 0
-          ? `${huSummary} ${state.winInfo.totalFan} 番`
-          : `${huSummary} ${displayedHandFan} 番（总 ${state.winInfo.totalFan} 番）`;
+      const handFanText = `(${huSummary}）总 ${state.winInfo.totalFan} 番`;
 
       return `${winner} ${methodText} ${tileToText(state.winInfo.tile)} · ${handFanText}${payer}`;
     }
@@ -132,7 +120,12 @@ export function useGameViewModel(
         handSignature: humanHandSignature,
       });
     },
-    [humanOptions.canDiscard, activeSelectedDiscardKey, dispatch, humanHandSignature],
+    [
+      humanOptions.canDiscard,
+      activeSelectedDiscardKey,
+      dispatch,
+      humanHandSignature,
+    ],
   );
 
   return {

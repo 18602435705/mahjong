@@ -1,11 +1,18 @@
 import "./BoardMeta.css";
 import type { RefObject } from "react";
+import type {
+  InitialDealPresetOption,
+  InitialDealPresetId,
+} from "../mahjongEngine";
 
 type BoardMetaProps = {
   menuRef: RefObject<HTMLDetailsElement | null>;
   menuOpen: boolean;
   round: number;
   statusText: string;
+  presetOptions: InitialDealPresetOption[];
+  selectedPresetId: InitialDealPresetId;
+  onPresetChange: (presetId: InitialDealPresetId) => void;
   onToggleMenu: () => void;
   onNextRound: () => void;
   onResetGame: () => void;
@@ -20,6 +27,9 @@ function BoardMeta(props: BoardMetaProps) {
     menuOpen,
     round,
     statusText,
+    presetOptions,
+    selectedPresetId,
+    onPresetChange,
     onToggleMenu,
     onNextRound,
     onResetGame,
@@ -40,10 +50,18 @@ function BoardMeta(props: BoardMetaProps) {
           ☰
         </summary>
         <div className="menu-panel">
-          <button type="button" className="menu-item btn-main" onClick={onNextRound}>
+          <button
+            type="button"
+            className="menu-item btn-main"
+            onClick={onNextRound}
+          >
             再来一局
           </button>
-          <button type="button" className="menu-item btn-sub" onClick={onResetGame}>
+          <button
+            type="button"
+            className="menu-item btn-sub"
+            onClick={onResetGame}
+          >
             重置积分
           </button>
         </div>
@@ -52,6 +70,23 @@ function BoardMeta(props: BoardMetaProps) {
       <div className="meta-status" aria-live="polite">
         {statusText}
       </div>
+      <label className="preset-picker">
+        <span className="preset-label">牌局</span>
+        <select
+          className="preset-select"
+          value={selectedPresetId}
+          onChange={(event) =>
+            onPresetChange(event.target.value as InitialDealPresetId)
+          }
+          aria-label="选择初始牌局预设"
+        >
+          {presetOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
     </section>
   );
 }
