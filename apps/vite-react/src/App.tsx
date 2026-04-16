@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import "./App.css";
 import { installAudioUnlock } from "./actionAudio";
 import BoardMeta from "./components/BoardMeta";
@@ -7,7 +7,6 @@ import HumanActionPanel from "./components/HumanActionPanel";
 import PlayerSeat from "./components/PlayerSeat";
 import { useAiStep } from "./hooks/useAiStep";
 import { useActionVoice } from "./hooks/useActionVoice";
-import { useDismissibleMenu } from "./hooks/useDismissibleMenu";
 import { useGameViewModel } from "./hooks/useGameViewModel";
 import {
   createInitialGameState,
@@ -27,8 +26,6 @@ function App() {
     undefined,
     createInitialGameState,
   );
-  const menuRef = useRef<HTMLDetailsElement | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<InitialDealPresetId>(
     INITIAL_DEAL_PRESET.RANDOM,
   );
@@ -49,13 +46,10 @@ function App() {
 
   useAiStep(state, currentClaim, qiangGangCandidate, dispatch);
   useActionVoice(state);
-  useDismissibleMenu(menuOpen, menuRef, () => setMenuOpen(false));
 
   return (
     <div className="mahjong-app">
       <BoardMeta
-        menuRef={menuRef}
-        menuOpen={menuOpen}
         round={state.round}
         statusText={statusText}
         presetOptions={INITIAL_DEAL_PRESET_OPTIONS}
@@ -64,14 +58,11 @@ function App() {
           setSelectedPresetId(presetId);
           dispatch({ type: GAME_ACTION.RESET_GAME, presetId });
         }}
-        onToggleMenu={() => setMenuOpen((current) => !current)}
         onNextRound={() => {
           dispatch({ type: GAME_ACTION.NEXT_ROUND, presetId: selectedPresetId });
-          setMenuOpen(false);
         }}
         onResetGame={() => {
           dispatch({ type: GAME_ACTION.RESET_GAME, presetId: selectedPresetId });
-          setMenuOpen(false);
         }}
       />
 

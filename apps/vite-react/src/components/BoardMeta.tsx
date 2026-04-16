@@ -1,19 +1,16 @@
 import "./BoardMeta.css";
-import type { RefObject } from "react";
+import * as Popover from "@radix-ui/react-popover";
 import type {
   InitialDealPresetOption,
   InitialDealPresetId,
 } from "../mahjongEngine";
 
 type BoardMetaProps = {
-  menuRef: RefObject<HTMLDetailsElement | null>;
-  menuOpen: boolean;
   round: number;
   statusText: string;
   presetOptions: InitialDealPresetOption[];
   selectedPresetId: InitialDealPresetId;
   onPresetChange: (presetId: InitialDealPresetId) => void;
-  onToggleMenu: () => void;
   onNextRound: () => void;
   onResetGame: () => void;
 };
@@ -23,49 +20,48 @@ type BoardMetaProps = {
  */
 function BoardMeta(props: BoardMetaProps) {
   const {
-    menuRef,
-    menuOpen,
     round,
     statusText,
     presetOptions,
     selectedPresetId,
     onPresetChange,
-    onToggleMenu,
     onNextRound,
     onResetGame,
   } = props;
 
   return (
     <section className="board-meta">
-      <details ref={menuRef} className="fab-menu" open={menuOpen}>
-        <summary
-          className="menu-trigger"
-          aria-label={menuOpen ? "关闭菜单" : "打开菜单"}
-          aria-expanded={menuOpen}
-          onClick={(event) => {
-            event.preventDefault();
-            onToggleMenu();
-          }}
-        >
-          ☰
-        </summary>
-        <div className="menu-panel">
-          <button
-            type="button"
-            className="menu-item btn-main"
-            onClick={onNextRound}
-          >
-            再来一局
-          </button>
-          <button
-            type="button"
-            className="menu-item btn-sub"
-            onClick={onResetGame}
-          >
-            重置积分
-          </button>
-        </div>
-      </details>
+      <div className="fab-menu">
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <button type="button" className="menu-trigger" aria-label="菜单">
+              ☰
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content className="menu-panel" sideOffset={8} align="start">
+              <Popover.Close asChild>
+                <button
+                  type="button"
+                  className="menu-item btn-main"
+                  onClick={onNextRound}
+                >
+                  再来一局
+                </button>
+              </Popover.Close>
+              <Popover.Close asChild>
+                <button
+                  type="button"
+                  className="menu-item btn-sub"
+                  onClick={onResetGame}
+                >
+                  重置积分
+                </button>
+              </Popover.Close>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
       <div className="meta-chip">第 {round} 局</div>
       <div className="meta-status" aria-live="polite">
         {statusText}
