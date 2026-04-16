@@ -1,40 +1,71 @@
+import { useCallback } from "react";
 import "./PlayerSeat.css";
 import SeatHandRow from "./SeatHandRow";
 import SeatHeader from "./SeatHeader";
 import SeatHiddenHandRow from "./SeatHiddenHandRow";
 import SeatMeldList from "./SeatMeldList";
 import {
+  GAME_ACTION,
+  getHumanTurnOptions,
   PHASE,
-  type GameState,
   type Tile,
 } from "../mahjongEngine";
+import { useGameStore } from "../store/gameStore";
 
 type PlayerSeatProps = {
-  title: string;
   playerIndex: number;
   seatClass: string;
-  state: GameState;
   showHand: boolean;
-  canDiscard?: boolean;
-  selectedTileKey?: string | null;
-  onTileClick?: (tile: Tile, index: number) => void;
 };
 
 /**
  * 渲染单个座位的玩家信息、手牌/暗牌、副露与动效表现。
  */
 function PlayerSeat(props: PlayerSeatProps) {
-  const {
-    title,
-    playerIndex,
-    seatClass,
-    state,
-    showHand,
-    canDiscard = false,
-    selectedTileKey = null,
-    onTileClick,
-  } = props;
+  const { playerIndex, seatClass, showHand } = props;
+  const state = useGameStore((store) => store.game);
+  const dispatch = useGameStore((store) => store.dispatch);
+  const selectedDiscard = useGameStore((store) => store.selectedDiscard);
+  const setSelectedDiscard = useGameStore((store) => store.setSelectedDiscard);
+
   const player = state.players[playerIndex];
+  const title = player.name;
+  const humanOptions = getHumanTurnOptions(state);
+  const canDiscard = playerIndex === 0 && humanOptions.canDiscard;
+  const humanHandSignature = state.players[0].hand.join("|");
+  const selectedTileKey =
+    canDiscard && selectedDiscard?.handSignature === humanHandSignature
+      ? selectedDiscard.key
+      : null;
+
+  const handleHumanTileClick = useCallback(
+    (tile: Tile, index: number) => {
+      if (playerIndex !== 0 || !canDiscard) {
+        return;
+      }
+
+      const key = `${tile}-${index}`;
+      if (selectedTileKey === key) {
+        dispatch({ type: GAME_ACTION.HUMAN_DISCARD, tile });
+        setSelectedDiscard(null);
+        return;
+      }
+
+      setSelectedDiscard({
+        key,
+        handSignature: humanHandSignature,
+      });
+    },
+    [
+      playerIndex,
+      canDiscard,
+      selectedTileKey,
+      dispatch,
+      setSelectedDiscard,
+      humanHandSignature,
+    ],
+  );
+
   const isCurrent =
     state.currentPlayer === playerIndex && state.phase === PHASE.PLAYER_TURN;
   const shouldShowHand = showHand || state.phase === PHASE.GAME_OVER;
@@ -100,7 +131,7 @@ function PlayerSeat(props: PlayerSeatProps) {
             drawnEntry={drawnEntry}
             canDiscard={canDiscard}
             selectedTileKey={selectedTileKey}
-            onTileClick={onTileClick}
+            onTileClick={playerIndex === 0 ? handleHumanTileClick : undefined}
           />
         )}
       </div>

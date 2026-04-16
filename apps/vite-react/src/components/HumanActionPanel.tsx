@@ -1,41 +1,33 @@
 import "./HumanActionPanel.css";
-import type { Dispatch } from "react";
 import ClaimDecisionActions from "./ClaimDecisionActions";
 import PlayerTurnActions from "./PlayerTurnActions";
 import QiangGangActions from "./QiangGangActions";
 import {
-  PHASE,
+  getCurrentHumanClaims,
+  getCurrentQiangGangCandidate,
   getHumanTurnOptions,
-  type ClaimRequest,
-  type GameAction,
-  type GameState,
-  type HuSpecialType,
-  type WinMethod,
+  getSelfHuMethod,
+  getSelfHuSpecials,
+  PHASE,
+  WIN_METHOD,
 } from "../mahjongEngine";
-
-type HumanActionPanelProps = {
-  state: GameState;
-  currentHumanClaims: ClaimRequest[];
-  qiangGangCandidate: number | null;
-  humanOptions: ReturnType<typeof getHumanTurnOptions>;
-  humanSelfHuMethod: WinMethod;
-  humanSelfHuSpecials: HuSpecialType[];
-  dispatch: Dispatch<GameAction>;
-};
+import { useGameStore } from "../store/gameStore";
 
 /**
  * 渲染人类玩家的可执行动作面板（出牌提示、胡/杠/碰/过等）。
  */
-function HumanActionPanel(props: HumanActionPanelProps) {
-  const {
-    state,
-    currentHumanClaims,
-    qiangGangCandidate,
-    humanOptions,
-    humanSelfHuMethod,
-    humanSelfHuSpecials,
-    dispatch,
-  } = props;
+function HumanActionPanel() {
+  const state = useGameStore((store) => store.game);
+  const dispatch = useGameStore((store) => store.dispatch);
+
+  const currentHumanClaims = getCurrentHumanClaims(state);
+  const qiangGangCandidate = getCurrentQiangGangCandidate(state);
+  const humanOptions = getHumanTurnOptions(state);
+  const humanSelfHuMethod =
+    humanOptions.selfHuMethod ?? getSelfHuMethod(state, 0) ?? WIN_METHOD.ZIMO;
+  const humanSelfHuSpecials =
+    humanOptions.selfHuSpecials ?? getSelfHuSpecials(state, 0);
+
   const isHumanActionPending =
     (state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0) ||
     (state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0) ||

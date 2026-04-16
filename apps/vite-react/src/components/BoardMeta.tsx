@@ -1,34 +1,23 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
 import * as Select from "@radix-ui/react-select";
-import type {
-  InitialDealPresetOption,
-  InitialDealPresetId,
+import {
+  INITIAL_DEAL_PRESET_OPTIONS,
+  type InitialDealPresetId,
 } from "../mahjongEngine";
-
-type BoardMetaProps = {
-  round: number;
-  statusText: string;
-  presetOptions: InitialDealPresetOption[];
-  selectedPresetId: InitialDealPresetId;
-  onPresetChange: (presetId: InitialDealPresetId) => void;
-  onNextRound: () => void;
-  onResetGame: () => void;
-};
+import { selectStatusText } from "../store/gameSelectors";
+import { useGameStore } from "../store/gameStore";
 
 /**
  * 渲染顶部元信息区域：菜单、局数与状态文案。
  */
-function BoardMeta(props: BoardMetaProps) {
-  const {
-    round,
-    statusText,
-    presetOptions,
-    selectedPresetId,
-    onPresetChange,
-    onNextRound,
-    onResetGame,
-  } = props;
+function BoardMeta() {
+  const round = useGameStore((store) => store.game.round);
+  const statusText = useGameStore((store) => selectStatusText(store.game));
+  const selectedPresetId = useGameStore((store) => store.selectedPresetId);
+  const selectPreset = useGameStore((store) => store.selectPreset);
+  const nextRound = useGameStore((store) => store.nextRound);
+  const resetGame = useGameStore((store) => store.resetGame);
 
   return (
     <section className="board-meta">
@@ -42,20 +31,12 @@ function BoardMeta(props: BoardMetaProps) {
           <Popover.Portal>
             <Popover.Content className="menu-panel" sideOffset={8} align="start">
               <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="menu-item btn-main"
-                  onClick={onNextRound}
-                >
+                <button type="button" className="menu-item btn-main" onClick={nextRound}>
                   再来一局
                 </button>
               </Popover.Close>
               <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="menu-item btn-sub"
-                  onClick={onResetGame}
-                >
+                <button type="button" className="menu-item btn-sub" onClick={resetGame}>
                   重置积分
                 </button>
               </Popover.Close>
@@ -71,7 +52,7 @@ function BoardMeta(props: BoardMetaProps) {
         <span className="preset-label">牌局</span>
         <Select.Root
           value={selectedPresetId}
-          onValueChange={(value) => onPresetChange(value as InitialDealPresetId)}
+          onValueChange={(value) => selectPreset(value as InitialDealPresetId)}
         >
           <Select.Trigger className="preset-select-trigger" aria-label="选择初始牌局预设">
             <Select.Value />
@@ -86,7 +67,7 @@ function BoardMeta(props: BoardMetaProps) {
               align="start"
             >
               <Select.Viewport className="preset-select-viewport">
-                {presetOptions.map((option) => (
+                {INITIAL_DEAL_PRESET_OPTIONS.map((option) => (
                   <Select.Item
                     key={option.id}
                     value={option.id}

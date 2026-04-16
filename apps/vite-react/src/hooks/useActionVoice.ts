@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { playActionVoice } from "../actionAudio";
 import { type GameState } from "../mahjongEngine";
+import { useGameStore } from "../store/gameStore";
 import { detectActionVoice } from "../utils/actionVoice";
 
 /**
  * 监听状态变化并在关键动作发生时播报语音。
  */
-export function useActionVoice(state: GameState) {
+export function useActionVoice() {
+  const state = useGameStore((store) => store.game);
   const previousStateRef = useRef<GameState | null>(null);
 
   useEffect(() => {

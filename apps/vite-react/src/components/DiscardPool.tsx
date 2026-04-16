@@ -2,13 +2,8 @@ import "./DiscardPool.css";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import TileAsset from "./TileAsset";
-import { type GameState } from "../mahjongEngine";
 import DiscardLane, { type DiscardFlightState } from "./DiscardLane";
-
-type DiscardPoolProps = {
-  state: GameState;
-  wallCount: number;
-};
+import { useGameStore } from "../store/gameStore";
 
 const DISCARD_FLIGHT_HOLD_MS = 420;
 const DISCARD_FLIGHT_TOTAL_MS = 1080;
@@ -16,15 +11,15 @@ const DISCARD_FLIGHT_TOTAL_MS = 1080;
 /**
  * 渲染中央弃牌区与牌墙剩余，并驱动弃牌飞入动画。
  */
-function DiscardPool({ state, wallCount }: DiscardPoolProps) {
+function DiscardPool() {
+  const state = useGameStore((store) => store.game);
+  const wallCount = state.wall.length;
   const prefersReducedMotion = useReducedMotion();
   const previousDiscardLengthsRef = useRef<number[] | null>(null);
   const [flight, setFlight] = useState<DiscardFlightState | null>(null);
 
   useLayoutEffect(() => {
-    const currentLengths = state.players.map(
-      (player) => player.discards.length,
-    );
+    const currentLengths = state.players.map((player) => player.discards.length);
     const previousLengths = previousDiscardLengthsRef.current;
 
     if (!previousLengths) {

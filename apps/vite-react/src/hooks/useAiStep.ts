@@ -1,11 +1,11 @@
-import { useEffect, type Dispatch } from "react";
+import { useEffect } from "react";
 import {
   GAME_ACTION,
   PHASE,
-  type ClaimRequest,
-  type GameAction,
-  type GameState,
+  getCurrentClaim,
+  getCurrentQiangGangCandidate,
 } from "../mahjongEngine";
+import { useGameStore } from "../store/gameStore";
 
 const AI_DISCARD_DELAY_MS = 1500;
 const AI_RESPONSE_DELAY_MS = 1000;
@@ -13,12 +13,12 @@ const AI_RESPONSE_DELAY_MS = 1000;
 /**
  * 在 AI 托管阶段按不同相位延时调度 AI_STEP。
  */
-export function useAiStep(
-  state: GameState,
-  currentClaim: ClaimRequest | null,
-  qiangGangCandidate: number | null,
-  dispatch: Dispatch<GameAction>,
-) {
+export function useAiStep() {
+  const state = useGameStore((store) => store.game);
+  const dispatch = useGameStore((store) => store.dispatch);
+  const currentClaim = getCurrentClaim(state);
+  const qiangGangCandidate = getCurrentQiangGangCandidate(state);
+
   useEffect(() => {
     if (state.phase === PHASE.GAME_OVER) {
       return;
