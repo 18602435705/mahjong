@@ -30,8 +30,8 @@ function PlayerSeat(props: PlayerSeatProps) {
 
   const player = state.players[playerIndex];
   const title = player.name;
-  const humanOptions = getHumanTurnOptions(state);
-  const canDiscard = playerIndex === 0 && humanOptions.canDiscard;
+  const canDiscard =
+    playerIndex === 0 ? getHumanTurnOptions(state).canDiscard : false;
   const humanHandSignature = state.players[0].hand.join("|");
   const selectedTileKey =
     canDiscard && selectedDiscard?.handSignature === humanHandSignature
@@ -81,7 +81,12 @@ function PlayerSeat(props: PlayerSeatProps) {
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
 
   let drawnEntryIndex = -1;
-  if (shouldShowHand && canDiscard && player.justDrawnTile && !isDealerOpeningTurn) {
+  if (
+    shouldShowHand &&
+    canDiscard &&
+    player.justDrawnTile &&
+    !isDealerOpeningTurn
+  ) {
     for (let i = handEntries.length - 1; i >= 0; i -= 1) {
       if (handEntries[i].tile === player.justDrawnTile) {
         drawnEntryIndex = i;
