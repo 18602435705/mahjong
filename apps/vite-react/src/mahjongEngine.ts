@@ -535,77 +535,139 @@ export const getHumanTurnOptions = (state: GameState) => {
 /**
  * 处理游戏 Action 并驱动完整状态流转。
  */
+type NextRoundAction = Extract<GameAction, { type: typeof GAME_ACTION.NEXT_ROUND }>;
+type ResetGameAction = Extract<GameAction, { type: typeof GAME_ACTION.RESET_GAME }>;
+type HumanDiscardAction = Extract<
+  GameAction,
+  { type: typeof GAME_ACTION.HUMAN_DISCARD }
+>;
+type HumanGangAction = Extract<GameAction, { type: typeof GAME_ACTION.HUMAN_GANG }>;
+type HumanClaimDecisionAction = Extract<
+  GameAction,
+  { type: typeof GAME_ACTION.HUMAN_CLAIM_DECISION }
+>;
+type HumanQiangGangDecisionAction = Extract<
+  GameAction,
+  { type: typeof GAME_ACTION.HUMAN_QIANG_GANG_DECISION }
+>;
+
+const HUMAN_PLAYER_INDEX = 0;
+
+function resolvePresetId(presetId?: InitialDealPresetId) {
+  return presetId ?? INITIAL_DEAL_PRESET.RANDOM;
+}
+
+function isHumanTurn(state: GameState) {
+  return (
+    state.phase === PHASE.PLAYER_TURN &&
+    state.currentPlayer === HUMAN_PLAYER_INDEX
+  );
+}
+
+function reduceNextRound(state: GameState, action: NextRoundAction): GameState {
+  const scores = state.players.map((player) => player.score);
+  return createRoundState(scores, state.round + 1, resolvePresetId(action.presetId));
+}
+
+function reduceResetGame(_state: GameState, action: ResetGameAction): GameState {
+  return createRoundState([0, 0, 0, 0], 1, resolvePresetId(action.presetId));
+}
+
+function reduceHumanDiscard(
+  state: GameState,
+  action: HumanDiscardAction,
+): GameState {
+  if (!isHumanTurn(state)) {
+    return state;
+  }
+
+  return discardTile(state, HUMAN_PLAYER_INDEX, action.tile);
+}
+
+function reduceHumanSelfHu(
+  state: GameState,
+): GameState {
+  if (!isHumanTurn(state)) {
+    return state;
+  }
+
+  return trySelfHu(state, HUMAN_PLAYER_INDEX);
+}
+
+function reduceHumanGang(state: GameState, action: HumanGangAction): GameState {
+  if (!isHumanTurn(state)) {
+    return state;
+  }
+
+  if (action.gangType === MELD_TYPE.AN_GANG) {
+    return tryAnGang(state, HUMAN_PLAYER_INDEX, action.tile);
+  }
+
+  return tryBuGang(state, HUMAN_PLAYER_INDEX, action.tile);
+}
+
+function reduceHumanClaimDecision(
+  state: GameState,
+  action: HumanClaimDecisionAction,
+): GameState {
+  const claimOptions = getCurrentHumanClaims(state);
+  if (claimOptions.length === 0) {
+    return state;
+  }
+
+  if (action.accept) {
+    const claim = action.claimAction
+      ? claimOptions.find((option) => option.action === action.claimAction)
+      : claimOptions[0];
+    if (!claim) {
+      return state;
+    }
+    return acceptClaim(state, claim);
+  }
+
+  return passLeadingClaimsForPlayer(state, HUMAN_PLAYER_INDEX);
+}
+
+function reduceHumanQiangGangDecision(
+  state: GameState,
+  action: HumanQiangGangDecisionAction,
+): GameState {
+  const candidate = getCurrentQiangGangCandidate(state);
+  if (candidate !== HUMAN_PLAYER_INDEX) {
+    return state;
+  }
+
+  if (action.accept) {
+    return acceptQiangGangHu(state, HUMAN_PLAYER_INDEX);
+  }
+
+  return passQiangGangHu(state);
+}
+
+function assertNever(action: never): never {
+  throw new Error(`Unhandled action: ${JSON.stringify(action)}`);
+}
+
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case GAME_ACTION.NEXT_ROUND: {
-      const scores = state.players.map((player) => player.score);
-      const presetId = action.presetId ?? INITIAL_DEAL_PRESET.RANDOM;
-      return createRoundState(scores, state.round + 1, presetId);
-    }
-    case GAME_ACTION.RESET_GAME: {
-      const presetId = action.presetId ?? INITIAL_DEAL_PRESET.RANDOM;
-      return createRoundState([0, 0, 0, 0], 1, presetId);
-    }
-    case GAME_ACTION.HUMAN_DISCARD: {
-      if (state.phase !== PHASE.PLAYER_TURN || state.currentPlayer !== 0) {
-        return state;
-      }
-
-      return discardTile(state, 0, action.tile);
-    }
-    case GAME_ACTION.HUMAN_SELF_HU: {
-      if (state.phase !== PHASE.PLAYER_TURN || state.currentPlayer !== 0) {
-        return state;
-      }
-
-      return trySelfHu(state, 0);
-    }
-    case GAME_ACTION.HUMAN_GANG: {
-      if (state.phase !== PHASE.PLAYER_TURN || state.currentPlayer !== 0) {
-        return state;
-      }
-
-      if (action.gangType === MELD_TYPE.AN_GANG) {
-        return tryAnGang(state, 0, action.tile);
-      }
-
-      return tryBuGang(state, 0, action.tile);
-    }
-    case GAME_ACTION.HUMAN_CLAIM_DECISION: {
-      const claimOptions = getCurrentHumanClaims(state);
-      if (claimOptions.length === 0) {
-        return state;
-      }
-
-      if (action.accept) {
-        const claim = action.claimAction
-          ? claimOptions.find((option) => option.action === action.claimAction)
-          : claimOptions[0];
-        if (!claim) {
-          return state;
-        }
-        return acceptClaim(state, claim);
-      }
-
-      return passLeadingClaimsForPlayer(state, 0);
-    }
-    case GAME_ACTION.HUMAN_QIANG_GANG_DECISION: {
-      const candidate = getCurrentQiangGangCandidate(state);
-      if (candidate !== 0) {
-        return state;
-      }
-
-      if (action.accept) {
-        return acceptQiangGangHu(state, 0);
-      }
-
-      return passQiangGangHu(state);
-    }
-    case GAME_ACTION.AI_STEP: {
+    case GAME_ACTION.NEXT_ROUND:
+      return reduceNextRound(state, action);
+    case GAME_ACTION.RESET_GAME:
+      return reduceResetGame(state, action);
+    case GAME_ACTION.HUMAN_DISCARD:
+      return reduceHumanDiscard(state, action);
+    case GAME_ACTION.HUMAN_SELF_HU:
+      return reduceHumanSelfHu(state);
+    case GAME_ACTION.HUMAN_GANG:
+      return reduceHumanGang(state, action);
+    case GAME_ACTION.HUMAN_CLAIM_DECISION:
+      return reduceHumanClaimDecision(state, action);
+    case GAME_ACTION.HUMAN_QIANG_GANG_DECISION:
+      return reduceHumanQiangGangDecision(state, action);
+    case GAME_ACTION.AI_STEP:
       return runAIStep(state);
-    }
     default:
-      return state;
+      return assertNever(action);
   }
 }
 
