@@ -1,5 +1,6 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
+import * as Select from "@radix-ui/react-select";
 import type {
   InitialDealPresetOption,
   InitialDealPresetId,
@@ -66,23 +67,42 @@ function BoardMeta(props: BoardMetaProps) {
       <div className="meta-status" aria-live="polite">
         {statusText}
       </div>
-      <label className="preset-picker">
+      <div className="preset-picker">
         <span className="preset-label">牌局</span>
-        <select
-          className="preset-select"
+        <Select.Root
           value={selectedPresetId}
-          onChange={(event) =>
-            onPresetChange(event.target.value as InitialDealPresetId)
-          }
-          aria-label="选择初始牌局预设"
+          onValueChange={(value) => onPresetChange(value as InitialDealPresetId)}
         >
-          {presetOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          <Select.Trigger className="preset-select-trigger" aria-label="选择初始牌局预设">
+            <Select.Value />
+            <Select.Icon className="preset-select-icon">▾</Select.Icon>
+          </Select.Trigger>
+
+          <Select.Portal>
+            <Select.Content
+              className="preset-select-content"
+              position="popper"
+              sideOffset={8}
+              align="start"
+            >
+              <Select.Viewport className="preset-select-viewport">
+                {presetOptions.map((option) => (
+                  <Select.Item
+                    key={option.id}
+                    value={option.id}
+                    className="preset-select-item"
+                  >
+                    <Select.ItemText>{option.label}</Select.ItemText>
+                    <Select.ItemIndicator className="preset-select-item-indicator">
+                      ✓
+                    </Select.ItemIndicator>
+                  </Select.Item>
+                ))}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
+      </div>
     </section>
   );
 }

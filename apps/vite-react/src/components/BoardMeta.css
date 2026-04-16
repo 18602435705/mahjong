@@ -135,7 +135,8 @@
   letter-spacing: 0.02em;
 }
 
-.preset-select {
+.preset-select-trigger {
+  appearance: none;
   border: 1px solid rgba(152, 111, 67, 0.72);
   border-radius: 999px;
   padding: 2px 8px;
@@ -144,11 +145,94 @@
   background: rgba(255, 248, 233, 0.94);
   font-size: clamp(0.52rem, 1.02vw, 0.68rem);
   font-family: var(--font-ui);
+  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
 }
 
-.preset-select:focus {
+.preset-select-trigger:focus-visible {
   outline: 2px solid rgba(186, 145, 86, 0.58);
   outline-offset: 1px;
+}
+
+.preset-select-icon {
+  color: rgba(103, 68, 37, 0.82);
+  font-size: 0.7em;
+}
+
+.preset-select-content {
+  z-index: 230;
+  min-width: var(--radix-select-trigger-width);
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(152, 111, 67, 0.72);
+  background:
+    linear-gradient(
+      165deg,
+      rgba(255, 245, 222, 0.98),
+      rgba(243, 223, 187, 0.97)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(96, 66, 34, 0.06),
+      rgba(96, 66, 34, 0.06) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  box-shadow: 0 10px 20px rgba(34, 20, 10, 0.35);
+  transform-origin: var(--radix-select-content-transform-origin);
+}
+
+.preset-select-content[data-state="open"] {
+  animation: menu-pop-in 0.16s ease-out;
+}
+
+.preset-select-viewport {
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.preset-select-item {
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 82, 42, 0.36);
+  color: #4a2f1a;
+  font-size: clamp(0.52rem, 1.02vw, 0.68rem);
+  font-family: var(--font-ui);
+  padding: 6px 26px 6px 8px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.preset-select-item[data-highlighted] {
+  outline: none;
+  background: linear-gradient(
+    140deg,
+    rgba(246, 215, 154, 0.9),
+    rgba(229, 190, 126, 0.86)
+  );
+  border-color: rgba(160, 113, 63, 0.48);
+}
+
+.preset-select-item[data-state="checked"] {
+  background: linear-gradient(
+    140deg,
+    rgba(246, 215, 154, 0.98),
+    rgba(229, 190, 126, 0.96)
+  );
+}
+
+.preset-select-item-indicator {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(97, 64, 35, 0.9);
+  font-size: 0.78em;
 }
 
 .meta-chip {
