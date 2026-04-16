@@ -33,6 +33,7 @@ function App() {
     statusText,
     humanOptions,
     currentClaim,
+    currentHumanClaims,
     qiangGangCandidate,
     humanSelfHuMethod,
     humanSelfHuSpecials,
@@ -108,7 +109,7 @@ function App() {
 
       <HumanActionPanel
         state={state}
-        currentClaim={currentClaim}
+        currentHumanClaims={currentHumanClaims}
         qiangGangCandidate={qiangGangCandidate}
         humanOptions={humanOptions}
         humanSelfHuMethod={humanSelfHuMethod}

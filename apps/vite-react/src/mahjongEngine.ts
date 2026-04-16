@@ -150,7 +150,11 @@ export type GameAction =
   | { type: typeof GAME_ACTION.HUMAN_DISCARD; tile: Tile }
   | { type: typeof GAME_ACTION.HUMAN_SELF_HU }
   | { type: typeof GAME_ACTION.HUMAN_GANG; gangType: HumanGangType; tile: Tile }
-  | { type: typeof GAME_ACTION.HUMAN_CLAIM_DECISION; accept: boolean }
+  | {
+      type: typeof GAME_ACTION.HUMAN_CLAIM_DECISION;
+      accept: boolean;
+      claimAction?: ClaimAction;
+    }
   | { type: typeof GAME_ACTION.HUMAN_QIANG_GANG_DECISION; accept: boolean }
   | { type: typeof GAME_ACTION.AI_STEP };
 
@@ -333,6 +337,31 @@ export const getCurrentClaim = (state: GameState): ClaimRequest | null =>
   state.phase === PHASE.CLAIM_DECISION && state.pendingClaims.length > 0
     ? state.pendingClaims[0]
     : null;
+
+/**
+ * 返回当前声明阶段队首连续可由指定玩家选择的全部声明动作。
+ */
+export const getLeadingClaimsForPlayer = (state: GameState, player: number) => {
+  if (state.phase !== PHASE.CLAIM_DECISION) {
+    return [] as ClaimRequest[];
+  }
+
+  const claims: ClaimRequest[] = [];
+  for (const claim of state.pendingClaims) {
+    if (claim.player !== player) {
+      break;
+    }
+    claims.push(claim);
+  }
+
+  return claims;
+};
+
+/**
+ * 返回当前声明阶段队首连续可由人类玩家（0号位）选择的声明动作。
+ */
+export const getCurrentHumanClaims = (state: GameState) =>
+  getLeadingClaimsForPlayer(state, 0);
 
 /**
  * 在抢杠胡阶段返回当前轮到决策的候选玩家。
@@ -543,16 +572,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return tryBuGang(state, 0, action.tile);
     }
     case GAME_ACTION.HUMAN_CLAIM_DECISION: {
-      const claim = getCurrentClaim(state);
-      if (!claim || claim.player !== 0) {
+      const claimOptions = getCurrentHumanClaims(state);
+      if (claimOptions.length === 0) {
         return state;
       }
 
       if (action.accept) {
+        const claim = action.claimAction
+          ? claimOptions.find((option) => option.action === action.claimAction)
+          : claimOptions[0];
+        if (!claim) {
+          return state;
+        }
         return acceptClaim(state, claim);
       }
 
-      return passClaim(state);
+      return passLeadingClaimsForPlayer(state, 0);
     }
     case GAME_ACTION.HUMAN_QIANG_GANG_DECISION: {
       const candidate = getCurrentQiangGangCandidate(state);
@@ -912,6 +947,30 @@ function passClaim(baseState: GameState): GameState {
   const [current] = state.pendingClaims;
   appendLog(state, `${state.players[current.player].name} 选择过`);
   state.pendingClaims.shift();
+
+  if (state.pendingClaims.length > 0) {
+    return state;
+  }
+
+  if (!state.lastDiscard) {
+    return state;
+  }
+
+  return enterTurn(state, nextPlayer(state.lastDiscard.from), true);
+}
+
+/**
+ * 让指定玩家一次性放弃当前队首连续可选的全部声明动作。
+ */
+function passLeadingClaimsForPlayer(baseState: GameState, player: number): GameState {
+  const leadingClaims = getLeadingClaimsForPlayer(baseState, player);
+  if (leadingClaims.length === 0) {
+    return baseState;
+  }
+
+  const state = cloneState(baseState);
+  appendLog(state, `${state.players[player].name} 选择过`);
+  state.pendingClaims.splice(0, leadingClaims.length);
 
   if (state.pendingClaims.length > 0) {
     return state;

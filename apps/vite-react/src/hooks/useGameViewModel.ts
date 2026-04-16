@@ -3,6 +3,7 @@ import {
   CLAIM_ACTION,
   GAME_ACTION,
   getCurrentClaim,
+  getCurrentHumanClaims,
   getCurrentQiangGangCandidate,
   getHumanTurnOptions,
   getSelfHuMethod,
@@ -36,6 +37,7 @@ export function useGameViewModel(
 
   const humanOptions = useMemo(() => getHumanTurnOptions(state), [state]);
   const currentClaim = useMemo(() => getCurrentClaim(state), [state]);
+  const currentHumanClaims = useMemo(() => getCurrentHumanClaims(state), [state]);
   const qiangGangCandidate = useMemo(
     () => getCurrentQiangGangCandidate(state),
     [state],
@@ -71,6 +73,18 @@ export function useGameViewModel(
           : currentClaim.action === CLAIM_ACTION.MING_GANG
             ? "明杠"
             : "碰";
+      if (currentClaim.player === 0 && currentHumanClaims.length > 1) {
+        const allActionText = currentHumanClaims
+          .map((claim) =>
+            claim.action === CLAIM_ACTION.HU
+              ? "胡"
+              : claim.action === CLAIM_ACTION.MING_GANG
+                ? "明杠"
+                : "碰",
+          )
+          .join(" / ");
+        return `等待响应：你可${allActionText} ${from} 的 ${tileToText(currentClaim.tile)}`;
+      }
       return `等待响应：${actor} 可${actionText} ${from} 的 ${tileToText(currentClaim.tile)}`;
     }
 
@@ -85,7 +99,7 @@ export function useGameViewModel(
 
     const current = state.players[state.currentPlayer].name;
     return `当前行动：${current}`;
-  }, [state, currentClaim, qiangGangCandidate]);
+  }, [state, currentClaim, currentHumanClaims, qiangGangCandidate]);
 
   const humanHandSignature = state.players[0].hand.join("|");
   const humanSelfHuMethod: WinMethod =
@@ -132,6 +146,7 @@ export function useGameViewModel(
     statusText,
     humanOptions,
     currentClaim,
+    currentHumanClaims,
     qiangGangCandidate,
     humanSelfHuMethod,
     humanSelfHuSpecials,

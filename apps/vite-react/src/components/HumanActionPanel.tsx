@@ -15,7 +15,7 @@ import {
 
 type HumanActionPanelProps = {
   state: GameState;
-  currentClaim: ClaimRequest | null;
+  currentHumanClaims: ClaimRequest[];
   qiangGangCandidate: number | null;
   humanOptions: ReturnType<typeof getHumanTurnOptions>;
   humanSelfHuMethod: WinMethod;
@@ -29,7 +29,7 @@ type HumanActionPanelProps = {
 function HumanActionPanel(props: HumanActionPanelProps) {
   const {
     state,
-    currentClaim,
+    currentHumanClaims,
     qiangGangCandidate,
     humanOptions,
     humanSelfHuMethod,
@@ -38,7 +38,7 @@ function HumanActionPanel(props: HumanActionPanelProps) {
   } = props;
   const isHumanActionPending =
     (state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0) ||
-    (state.phase === PHASE.CLAIM_DECISION && currentClaim?.player === 0) ||
+    (state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0) ||
     (state.phase === PHASE.QIANG_GANG_DECISION && qiangGangCandidate === 0);
 
   if (!isHumanActionPending) {
@@ -58,8 +58,8 @@ function HumanActionPanel(props: HumanActionPanelProps) {
           />
         )}
 
-        {state.phase === PHASE.CLAIM_DECISION && currentClaim?.player === 0 && (
-          <ClaimDecisionActions currentClaim={currentClaim} dispatch={dispatch} />
+        {state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0 && (
+          <ClaimDecisionActions currentClaims={currentHumanClaims} dispatch={dispatch} />
         )}
 
         {state.phase === PHASE.QIANG_GANG_DECISION &&

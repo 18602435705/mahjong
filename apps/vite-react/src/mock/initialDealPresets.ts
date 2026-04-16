@@ -7,6 +7,7 @@ export const INITIAL_DEAL_PRESET = {
   AN_GANG: "anGang",
   DEALER_TENPAI: "dealerTenpai",
   AI_MING_GANG: "aiMingGang",
+  HUMAN_MULTI_CLAIM: "humanMultiClaim",
 } as const;
 export type InitialDealPresetId =
   (typeof INITIAL_DEAL_PRESET)[keyof typeof INITIAL_DEAL_PRESET];
@@ -28,6 +29,7 @@ export const INITIAL_DEAL_PRESET_OPTIONS: InitialDealPresetOption[] = [
   { id: INITIAL_DEAL_PRESET.AN_GANG, label: "你可暗杠（开局）" },
   { id: INITIAL_DEAL_PRESET.DEALER_TENPAI, label: "庄家开场听牌" },
   { id: INITIAL_DEAL_PRESET.AI_MING_GANG, label: "测试 AI 明杠（开局）" },
+  { id: INITIAL_DEAL_PRESET.HUMAN_MULTI_CLAIM, label: "测试同屏胡/杠/碰（先打9筒）" },
 ];
 
 export const INITIAL_DEAL_PRESET_CONFIG: Record<
@@ -129,5 +131,30 @@ export const INITIAL_DEAL_PRESET_CONFIG: Record<
       ["T1", "T1", "T2", "T2", "T3", "T3", "B1", "B4", "B7", "W4", "W6", "W8", "B2"],
     ],
     humanJustDrawnTile: "T9",
+  },
+  [INITIAL_DEAL_PRESET.HUMAN_MULTI_CLAIM]: {
+    hands: [
+      [
+        "W1",
+        "W1",
+        "W2",
+        "W2",
+        "W9",
+        "W9",
+        "W9",
+        "T1",
+        "T1",
+        "T2",
+        "T2",
+        "B1",
+        "B1",
+        "B9",
+      ],
+      ["W1", "W2", "W4", "W5", "W8", "W8", "W9", "T1", "T2", "T3", "B1", "B2", "B3"],
+      ["W3", "W4", "W5", "W6", "W7", "W8", "T4", "T5", "T6", "T9", "B4", "B5", "B6"],
+      ["W3", "W4", "W6", "W7", "W8", "T3", "T4", "T6", "T7", "B2", "B3", "B5", "B7"],
+    ],
+    humanJustDrawnTile: "B9",
+    wallDrawSequence: ["W3"],
   },
 };
