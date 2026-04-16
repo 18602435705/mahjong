@@ -1,0 +1,18 @@
+{
+  "name": "express-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "build": "echo \"No build step for express-app\"",
+    "lint": "echo \"No lint step for express-app\"",
+    "test": "echo \"No tests yet for express-app\""
+  },
+  "dependencies": {
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
+  }
+}

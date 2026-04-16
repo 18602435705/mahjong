@@ -12,6 +12,14 @@
       "name": "📊 demo",
       "path": "apps/demo",
     },
+    {
+      "name": "⚛️ vite-react",
+      "path": "apps/vite-react",
+    },
+    {
+      "name": "🚂 express-app",
+      "path": "apps/express-app",
+    },
   ],
   "settings": {},
   "extensions": {
