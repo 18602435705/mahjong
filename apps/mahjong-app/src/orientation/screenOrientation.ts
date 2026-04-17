@@ -128,3 +128,15 @@ export async function tryExitFullscreen(): Promise<void> {
     // no-op
   }
 }
+
+// 游戏场景：尝试进入全屏并锁定到横屏。
+export async function tryEnterFullscreenAndLockLandscape(): Promise<void> {
+  await tryRequestFullscreen();
+  await tryLockOrientation("landscape");
+}
+
+// 非游戏场景：尝试退出全屏并锁定到竖屏。
+export async function tryExitFullscreenAndLockPortrait(): Promise<void> {
+  await tryExitFullscreen();
+  await tryLockOrientation("portrait");
+}

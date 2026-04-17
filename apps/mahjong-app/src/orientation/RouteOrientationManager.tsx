@@ -9,9 +9,8 @@ import { useLocation } from "react-router-dom";
 import {
   getCurrentOrientationMode,
   isFullscreenActive,
-  tryLockOrientation,
-  tryRequestFullscreen,
-  tryExitFullscreen,
+  tryEnterFullscreenAndLockLandscape,
+  tryExitFullscreenAndLockPortrait,
 } from "./screenOrientation";
 import { useOrientationStore } from "../store/orientationStore";
 import "./RouteOrientationManager.css";
@@ -97,11 +96,9 @@ export default function RouteOrientationManager({
   useEffect(() => {
     void (async () => {
       if (isGamePage) {
-        await tryRequestFullscreen();
-        await tryLockOrientation("landscape");
+        await tryEnterFullscreenAndLockLandscape();
       } else {
-        await tryExitFullscreen();
-        await tryLockOrientation("portrait");
+        await tryExitFullscreenAndLockPortrait();
       }
     })();
   }, [isGamePage]);
@@ -114,8 +111,7 @@ export default function RouteOrientationManager({
     setIsRequestingFullscreen(true);
 
     try {
-      await tryRequestFullscreen();
-      await tryLockOrientation("landscape");
+      await tryEnterFullscreenAndLockLandscape();
       syncScreenState();
     } finally {
       setIsRequestingFullscreen(false);
