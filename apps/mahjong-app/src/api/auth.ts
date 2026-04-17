@@ -1,41 +1,42 @@
-import { requestJson } from "./client";
+import { request } from "./client";
 import type { AuthUser } from "../auth/storage";
 
-interface AuthSuccessResponse {
+export interface AuthCredentials {
+  username: string;
+  password: string;
+}
+
+export interface AuthSuccessResponse {
   status: "ok";
   message?: string;
   user: AuthUser;
   token: string;
 }
 
-interface MeSuccessResponse {
+export interface AuthMeResponse {
   status: "ok";
   user: AuthUser;
 }
 
-export interface AuthPayload {
-  username: string;
-  password: string;
-}
-
-export async function registerByPassword(payload: AuthPayload) {
-  return requestJson<AuthSuccessResponse>("/api/auth/register", {
+export function registerByPassword(payload: AuthCredentials) {
+  return request<AuthSuccessResponse>({
+    url: "/api/auth/register",
     method: "POST",
-    body: JSON.stringify(payload),
+    data: payload,
   });
 }
 
-export async function loginByPassword(payload: AuthPayload) {
-  return requestJson<AuthSuccessResponse>("/api/auth/login", {
+export function loginByPassword(payload: AuthCredentials) {
+  return request<AuthSuccessResponse>({
+    url: "/api/auth/login",
     method: "POST",
-    body: JSON.stringify(payload),
+    data: payload,
   });
 }
 
-export async function getCurrentUser(token: string) {
-  return requestJson<MeSuccessResponse>("/api/auth/me", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export function getCurrentUser() {
+  return request<AuthMeResponse>({
+    url: "/api/auth/me",
+    method: "GET",
   });
 }
