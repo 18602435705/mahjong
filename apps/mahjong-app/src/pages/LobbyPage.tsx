@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
+import { applyPreferredOrientation } from "../orientation/screenOrientation";
 import "./LobbyPage.css";
 
 function wait(durationMs: number) {
@@ -21,6 +22,9 @@ export default function LobbyPage() {
   async function enterGame(message: string) {
     setFeedback(message);
     setIsBusy(true);
+    await applyPreferredOrientation("landscape", {
+      allowFullscreen: true,
+    });
     await wait(320);
     navigate("/game");
   }

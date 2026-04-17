@@ -22,20 +22,15 @@ export default function GamePage() {
   return (
     <div className="mahjong-app">
       <BoardMeta />
-
       <main className="table-grid">
         <PlayerSeat playerIndex={2} showHand={false} seatClass="seat-top" />
         <PlayerSeat playerIndex={3} showHand={false} seatClass="seat-left" />
-
         <section className="center-panel">
           <DiscardPool />
         </section>
-
         <PlayerSeat playerIndex={1} showHand={false} seatClass="seat-right" />
-
         <PlayerSeat playerIndex={0} showHand seatClass="seat-bottom" />
       </main>
-
       <HumanActionPanel />
     </div>
   );

@@ -6,6 +6,7 @@ import {
   INITIAL_DEAL_PRESET_OPTIONS,
   type InitialDealPresetId,
 } from "../mahjongEngine";
+import { applyPreferredOrientation } from "../orientation/screenOrientation";
 import { selectStatusText } from "../store/gameSelectors";
 import { useGameStore } from "../store/gameStore";
 
@@ -21,7 +22,11 @@ function BoardMeta() {
   const nextRound = useGameStore((store) => store.nextRound);
   const resetGame = useGameStore((store) => store.resetGame);
 
-  function handleBackLobby() {
+  async function handleBackLobby() {
+    await applyPreferredOrientation("portrait", {
+      allowFullscreen: false,
+      exitFullscreenAfterLock: true,
+    });
     navigate("/lobby");
   }
 
@@ -40,7 +45,9 @@ function BoardMeta() {
                 <button
                   type="button"
                   className="menu-item btn-nav"
-                  onClick={handleBackLobby}
+                  onClick={() => {
+                    void handleBackLobby();
+                  }}
                 >
                   返回大厅
                 </button>

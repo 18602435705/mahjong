@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
+import RouteOrientationManager from "./orientation/RouteOrientationManager";
 import AuthPage from "./pages/AuthPage";
 import GamePage from "./pages/GamePage";
 import LobbyPage from "./pages/LobbyPage";
@@ -29,7 +30,9 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <RouteOrientationManager>
+          <AppRoutes />
+        </RouteOrientationManager>
       </BrowserRouter>
     </AuthProvider>
   );
