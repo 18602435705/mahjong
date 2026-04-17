@@ -145,7 +145,7 @@ importers:
         specifier: ^3.15.3
         version: 3.22.0(@types/node@24.12.2)
 
-  apps/vite-react:
+  apps/mahjong-app:
     dependencies:
       '@radix-ui/react-popover':
         specifier: ^1.1.15

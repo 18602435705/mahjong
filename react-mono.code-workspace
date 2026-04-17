@@ -13,8 +13,8 @@
       "path": "apps/demo",
     },
     {
-      "name": "⚛️ vite-react",
-      "path": "apps/vite-react",
+      "name": "⚛️ mahjong-app",
+      "path": "apps/mahjong-app",
     },
     {
       "name": "🚂 mahjong-server",
