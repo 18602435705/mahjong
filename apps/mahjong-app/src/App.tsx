@@ -1,44 +1,36 @@
-import { useEffect } from "react";
-import "./App.css";
-import { installAudioUnlock } from "./actionAudio";
-import BoardMeta from "./components/BoardMeta";
-import DiscardPool from "./components/DiscardPool";
-import HumanActionPanel from "./components/HumanActionPanel";
-import PlayerSeat from "./components/PlayerSeat";
-import { useAiStep } from "./hooks/useAiStep";
-import { useActionVoice } from "./hooks/useActionVoice";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthContext";
+import AuthPage from "./pages/AuthPage";
+import GamePage from "./pages/GamePage";
+import LobbyPage from "./pages/LobbyPage";
+import {
+  ProtectedRoute,
+  PublicOnlyRoute,
+  RootRedirect,
+} from "./router/RouteGuards";
 
-/**
- * 麻将对局主界面容器，负责页面布局与副作用挂载。
- */
-function App() {
-  useEffect(() => {
-    installAudioUnlock();
-  }, []);
-
-  useAiStep();
-  useActionVoice();
-
+function AppRoutes() {
   return (
-    <div className="mahjong-app">
-      <BoardMeta />
-
-      <main className="table-grid">
-        <PlayerSeat playerIndex={2} showHand={false} seatClass="seat-top" />
-        <PlayerSeat playerIndex={3} showHand={false} seatClass="seat-left" />
-
-        <section className="center-panel">
-          <DiscardPool />
-        </section>
-
-        <PlayerSeat playerIndex={1} showHand={false} seatClass="seat-right" />
-
-        <PlayerSeat playerIndex={0} showHand seatClass="seat-bottom" />
-      </main>
-
-      <HumanActionPanel />
-    </div>
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/auth" element={<AuthPage />} />
+      </Route>
+      <Route element={<ProtectedRoute />}>
+        <Route path="/lobby" element={<LobbyPage />} />
+        <Route path="/game" element={<GamePage />} />
+      </Route>
+      <Route path="*" element={<RootRedirect />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

@@ -1,73 +1,43 @@
-# React + TypeScript + Vite
+# mahjong-app
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+麻将前端应用，包含认证页、大厅页与对局页。
 
-Currently, two official plugins are available:
+## 已实现页面
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `/auth`：登录/注册同页切换（用户名 + 密码）
+- `/lobby`：大厅页（mock 房间列表、创建房间、加入房间）
+- `/game`：麻将对局页（沿用现有桌面 UI）
 
-## React Compiler
+未登录访问 `/lobby` 与 `/game` 时会自动跳转 `/auth`。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 运行
 
-## Expanding the ESLint configuration
+1. 在仓库根目录安装依赖：
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. 启动开发：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm --filter mahjong-app dev
 ```
+
+## API 地址配置
+
+项目通过 `VITE_API_BASE_URL` 读取后端地址。
+
+可在 `apps/mahjong-app` 下新建 `.env`：
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:3000
+```
+
+如未配置，则默认使用 `http://127.0.0.1:3000`。
+
+## 对接接口
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`（预留，可用于会话校验）

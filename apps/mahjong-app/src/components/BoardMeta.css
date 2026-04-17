@@ -90,6 +90,14 @@
   );
 }
 
+.btn-nav {
+  background: linear-gradient(
+    140deg,
+    rgba(246, 224, 184, 0.98),
+    rgba(234, 204, 156, 0.96)
+  );
+}
+
 .btn-sub {
   background: linear-gradient(
     140deg,

@@ -1,6 +1,7 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
 import * as Select from "@radix-ui/react-select";
+import { useNavigate } from "react-router-dom";
 import {
   INITIAL_DEAL_PRESET_OPTIONS,
   type InitialDealPresetId,
@@ -12,12 +13,17 @@ import { useGameStore } from "../store/gameStore";
  * 渲染顶部元信息区域：菜单、局数与状态文案。
  */
 function BoardMeta() {
+  const navigate = useNavigate();
   const round = useGameStore((store) => store.game.round);
   const statusText = useGameStore((store) => selectStatusText(store.game));
   const selectedPresetId = useGameStore((store) => store.selectedPresetId);
   const selectPreset = useGameStore((store) => store.selectPreset);
   const nextRound = useGameStore((store) => store.nextRound);
   const resetGame = useGameStore((store) => store.resetGame);
+
+  function handleBackLobby() {
+    navigate("/lobby");
+  }
 
   return (
     <section className="board-meta">
@@ -30,6 +36,15 @@ function BoardMeta() {
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content className="menu-panel" sideOffset={8} align="start">
+              <Popover.Close asChild>
+                <button
+                  type="button"
+                  className="menu-item btn-nav"
+                  onClick={handleBackLobby}
+                >
+                  返回大厅
+                </button>
+              </Popover.Close>
               <Popover.Close asChild>
                 <button type="button" className="menu-item btn-main" onClick={nextRound}>
                   再来一局
