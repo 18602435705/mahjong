@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { installAudioUnlock } from "../actionAudio";
 import BoardMeta from "../components/BoardMeta";
 import DiscardPool from "../components/DiscardPool";
 import HumanActionPanel from "../components/HumanActionPanel";
@@ -12,10 +10,6 @@ import "../App.css";
  * 麻将对局主界面容器，负责页面布局与副作用挂载。
  */
 export default function GamePage() {
-  useEffect(() => {
-    installAudioUnlock();
-  }, []);
-
   useAiStep();
   useActionVoice();
 

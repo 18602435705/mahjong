@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { installAudioUnlock } from "./actionAudio";
 import { AuthProvider } from "./auth/AuthContext";
 import RouteOrientationManager from "./orientation/RouteOrientationManager";
 import AuthPage from "./pages/AuthPage";
@@ -27,6 +29,10 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>

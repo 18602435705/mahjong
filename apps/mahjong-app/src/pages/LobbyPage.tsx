@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { activateVoicePlayback } from "../actionAudio";
 import { useAuth } from "../auth/useAuth";
 import { applyPreferredOrientation } from "../orientation/screenOrientation";
 import "./LobbyPage.css";
@@ -22,6 +23,7 @@ export default function LobbyPage() {
   async function enterGame(message: string) {
     setFeedback(message);
     setIsBusy(true);
+    activateVoicePlayback();
     await applyPreferredOrientation("landscape", {
       allowFullscreen: true,
     });

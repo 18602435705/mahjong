@@ -1,192 +1,107 @@
-export const ACTION_SOUND = {
-  DRAW: "draw",
-  DISCARD: "discard",
-  PENG: "peng",
-  GANG: "gang",
-  HU: "hu",
-} as const;
-export type ActionSound = (typeof ACTION_SOUND)[keyof typeof ACTION_SOUND];
-
 const WINDOW_EVENT = {
   POINTER_DOWN: "pointerdown",
+  TOUCH_START: "touchstart",
   KEY_DOWN: "keydown",
 } as const;
+
 const LANGUAGE = {
   CHINESE_PREFIX: "zh",
   CHINESE_MAINLAND: "zh-CN",
 } as const;
 
-type ToneOptions = {
-  frequency: number;
-  start: number;
-  duration: number;
-  type?: OscillatorType;
-  volume?: number;
-  detune?: number;
-};
-
-let audioContext: AudioContext | null = null;
-let masterGain: GainNode | null = null;
 let unlockBound = false;
+let speechPrimed = false;
+let voicesListenerBound = false;
+let cachedVoices: SpeechSynthesisVoice[] = [];
 
-/**
- * 惰性创建并复用 Web Audio 上下文与主音量节点；在不支持或非浏览器环境时返回 null。
- */
-function getAudioContext() {
-  if (typeof window === "undefined") {
+function getSpeechSynthesisSafe() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return null;
+  }
+  return window.speechSynthesis;
+}
+
+function refreshVoices() {
+  const synthesis = getSpeechSynthesisSafe();
+  if (!synthesis) {
+    return;
+  }
+  cachedVoices = synthesis.getVoices();
+}
+
+function ensureVoicesReady() {
+  const synthesis = getSpeechSynthesisSafe();
+  if (!synthesis) {
+    return;
+  }
+
+  if (!voicesListenerBound) {
+    voicesListenerBound = true;
+    synthesis.addEventListener("voiceschanged", refreshVoices);
+  }
+
+  if (cachedVoices.length === 0) {
+    refreshVoices();
+  }
+}
+
+function pickChineseVoice() {
+  if (cachedVoices.length === 0) {
     return null;
   }
 
-  if (audioContext) {
-    return audioContext;
+  const mainlandVoice = cachedVoices.find(
+    (voice) =>
+      voice.lang.toLowerCase() === LANGUAGE.CHINESE_MAINLAND.toLowerCase(),
+  );
+  if (mainlandVoice) {
+    return mainlandVoice;
   }
 
-  const Ctx =
-    window.AudioContext ??
-    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
+  return (
+    cachedVoices.find((voice) =>
+      voice.lang.toLowerCase().startsWith(LANGUAGE.CHINESE_PREFIX),
+    ) ?? null
+  );
+}
 
-  if (!Ctx) {
-    return null;
+function primeSpeechSynthesis() {
+  if (speechPrimed) {
+    return;
   }
 
-  audioContext = new Ctx();
-  masterGain = audioContext.createGain();
-  masterGain.gain.value = 0.2;
-  masterGain.connect(audioContext.destination);
-  return audioContext;
+  const synthesis = getSpeechSynthesisSafe();
+  if (!synthesis) {
+    return;
+  }
+
+  try {
+    // On some mobile browsers, speaking once inside a user gesture helps unlock TTS.
+    const probe = new SpeechSynthesisUtterance(" ");
+    probe.lang = LANGUAGE.CHINESE_MAINLAND;
+    probe.volume = 0;
+    probe.rate = 1;
+    probe.pitch = 1;
+
+    synthesis.cancel();
+    synthesis.resume();
+    synthesis.speak(probe);
+    speechPrimed = true;
+  } catch {
+    // no-op
+  }
 }
 
 /**
- * 按给定频率、时长和包络参数调度一个短音符，并接入指定增益节点。
+ * 在用户手势中主动触发一次 TTS 初始化，提升移动端语音播报成功率。
  */
-function scheduleTone(
-  context: AudioContext,
-  gainNode: GainNode,
-  options: ToneOptions,
-) {
-  const {
-    frequency,
-    start,
-    duration,
-    type = "triangle",
-    volume = 0.15,
-    detune = 0,
-  } = options;
-  const osc = context.createOscillator();
-  const gain = context.createGain();
-
-  osc.type = type;
-  osc.frequency.setValueAtTime(frequency, start);
-  osc.detune.setValueAtTime(detune, start);
-
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(volume, start + 0.007);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-
-  osc.connect(gain);
-  gain.connect(gainNode);
-
-  osc.start(start);
-  osc.stop(start + duration + 0.025);
+export function activateVoicePlayback() {
+  ensureVoicesReady();
+  primeSpeechSynthesis();
 }
 
 /**
- * 根据摸牌、打牌、碰、杠、胡等动作播放对应的合成音效。
- */
-export function playActionSound(action: ActionSound) {
-  const context = getAudioContext();
-  if (!context || !masterGain) {
-    return;
-  }
-  const gainNode = masterGain;
-
-  if (context.state === "suspended") {
-    void context.resume().catch(() => {});
-  }
-
-  const start = context.currentTime + 0.01;
-
-  if (action === ACTION_SOUND.DRAW) {
-    scheduleTone(context, gainNode, {
-      frequency: 508,
-      start,
-      duration: 0.06,
-      type: "sine",
-      volume: 0.095,
-    });
-    return;
-  }
-
-  if (action === ACTION_SOUND.DISCARD) {
-    scheduleTone(context, gainNode, {
-      frequency: 410,
-      start,
-      duration: 0.032,
-      type: "square",
-      volume: 0.145,
-    });
-    scheduleTone(context, gainNode, {
-      frequency: 286,
-      start: start + 0.02,
-      duration: 0.05,
-      type: "triangle",
-      volume: 0.12,
-    });
-    return;
-  }
-
-  if (action === ACTION_SOUND.PENG) {
-    [0, 0.06, 0.12].forEach((offset) => {
-      scheduleTone(context, gainNode, {
-        frequency: 362,
-        start: start + offset,
-        duration: 0.042,
-        type: "triangle",
-        volume: 0.122,
-      });
-    });
-    return;
-  }
-
-  if (action === ACTION_SOUND.GANG) {
-    scheduleTone(context, gainNode, {
-      frequency: 225,
-      start,
-      duration: 0.09,
-      type: "square",
-      volume: 0.16,
-    });
-    scheduleTone(context, gainNode, {
-      frequency: 332,
-      start: start + 0.1,
-      duration: 0.055,
-      type: "triangle",
-      volume: 0.12,
-    });
-    scheduleTone(context, gainNode, {
-      frequency: 262,
-      start: start + 0.16,
-      duration: 0.06,
-      type: "triangle",
-      volume: 0.11,
-    });
-    return;
-  }
-
-  [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-    scheduleTone(context, gainNode, {
-      frequency,
-      start: start + index * 0.07,
-      duration: 0.11,
-      type: "sine",
-      volume: 0.11,
-    });
-  });
-}
-
-/**
- * 注册首次用户交互解锁音频的监听器，避免浏览器自动播放限制导致无声。
+ * 注册全局手势监听：首次触发时尝试解锁语音播报能力并预加载 voice 列表。
  */
 export function installAudioUnlock() {
   if (typeof window === "undefined" || unlockBound) {
@@ -195,22 +110,17 @@ export function installAudioUnlock() {
 
   unlockBound = true;
 
-  /**
-   * 在首次点击或按键后恢复音频上下文，并立即移除解锁监听。
-   */
   const unlock = () => {
-    const context = getAudioContext();
-    if (!context) {
-      return;
-    }
+    activateVoicePlayback();
 
-    void context.resume().catch(() => {});
     window.removeEventListener(WINDOW_EVENT.POINTER_DOWN, unlock);
+    window.removeEventListener(WINDOW_EVENT.TOUCH_START, unlock);
     window.removeEventListener(WINDOW_EVENT.KEY_DOWN, unlock);
     unlockBound = false;
   };
 
   window.addEventListener(WINDOW_EVENT.POINTER_DOWN, unlock, { passive: true });
+  window.addEventListener(WINDOW_EVENT.TOUCH_START, unlock, { passive: true });
   window.addEventListener(WINDOW_EVENT.KEY_DOWN, unlock);
 }
 
@@ -218,17 +128,15 @@ export function installAudioUnlock() {
  * 调用浏览器语音合成朗读动作文案，优先选择中文语音。
  */
 export function playActionVoice(voice: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+  const synthesis = getSpeechSynthesisSafe();
+  if (!synthesis) {
     return;
   }
 
-  const synthesis = window.speechSynthesis;
+  ensureVoicesReady();
+
   const utterance = new SpeechSynthesisUtterance(voice);
-  const voices = synthesis.getVoices();
-  const chineseVoice =
-    voices.find((item) =>
-      item.lang.toLowerCase().startsWith(LANGUAGE.CHINESE_PREFIX),
-    ) ?? null;
+  const chineseVoice = pickChineseVoice();
 
   utterance.lang = LANGUAGE.CHINESE_MAINLAND;
   utterance.rate = 1;
@@ -239,6 +147,11 @@ export function playActionVoice(voice: string) {
     utterance.voice = chineseVoice;
   }
 
-  synthesis.cancel();
-  synthesis.speak(utterance);
+  try {
+    synthesis.cancel();
+    synthesis.resume();
+    synthesis.speak(utterance);
+  } catch {
+    // no-op
+  }
 }
