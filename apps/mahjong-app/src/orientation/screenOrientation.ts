@@ -1,9 +1,6 @@
+// 提供横竖屏与全屏能力，供路由/页面动作调用。
+// 与浏览器兼容相关的降级处理统一放在本文件中。
 export type OrientationMode = "portrait" | "landscape";
-
-interface OrientationOptions {
-  allowFullscreen?: boolean;
-  exitFullscreenAfterLock?: boolean;
-}
 
 interface WebkitFullscreenElement extends HTMLElement {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -11,12 +8,15 @@ interface WebkitFullscreenElement extends HTMLElement {
 
 interface WebkitFullscreenDocument extends Document {
   webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
 }
 
+// SSR 保护：方向与全屏 API 仅在浏览器环境可用。
 function isBrowserEnvironment() {
   return typeof window !== "undefined";
 }
 
+// 通过媒体查询读取当前视口方向。
 export function getCurrentOrientationMode(): OrientationMode {
   if (!isBrowserEnvironment()) {
     return "portrait";
@@ -27,11 +27,28 @@ export function getCurrentOrientationMode(): OrientationMode {
     : "landscape";
 }
 
+// 便捷判断：当前方向是否已匹配目标方向。
 export function isOrientationMatched(target: OrientationMode) {
   return getCurrentOrientationMode() === target;
 }
 
-async function tryLockOrientation(target: OrientationMode): Promise<boolean> {
+// 兼容标准与 WebKit 前缀的全屏状态读取。
+export function isFullscreenActive() {
+  if (!isBrowserEnvironment()) {
+    return false;
+  }
+
+  const webkitDocument = document as WebkitFullscreenDocument;
+  return Boolean(
+    document.fullscreenElement || webkitDocument.webkitFullscreenElement,
+  );
+}
+
+// 尝试调用 Orientation Lock API。
+// 在不支持或被浏览器拒绝时返回 false。
+export async function tryLockOrientation(
+  target: OrientationMode,
+): Promise<boolean> {
   if (!isBrowserEnvironment()) {
     return false;
   }
@@ -49,12 +66,13 @@ async function tryLockOrientation(target: OrientationMode): Promise<boolean> {
   }
 }
 
-async function tryRequestFullscreen(): Promise<boolean> {
+// 请求进入全屏：优先标准 API，失败后回退 WebKit 前缀 API。
+export async function tryRequestFullscreen(): Promise<boolean> {
   if (!isBrowserEnvironment()) {
     return false;
   }
 
-  if (document.fullscreenElement) {
+  if (isFullscreenActive()) {
     return true;
   }
 
@@ -78,15 +96,16 @@ async function tryRequestFullscreen(): Promise<boolean> {
     // no-op
   }
 
-  return Boolean(document.fullscreenElement);
+  return isFullscreenActive();
 }
 
+// 退出全屏：优先标准 API，失败后回退 WebKit 前缀 API。
 export async function tryExitFullscreen(): Promise<void> {
   if (!isBrowserEnvironment()) {
     return;
   }
 
-  if (!document.fullscreenElement) {
+  if (!isFullscreenActive()) {
     return;
   }
 
@@ -107,36 +126,5 @@ export async function tryExitFullscreen(): Promise<void> {
     }
   } catch {
     // no-op
-  }
-}
-
-export async function applyPreferredOrientation(
-  target: OrientationMode,
-  options: OrientationOptions = {},
-): Promise<void> {
-  const allowFullscreen = options.allowFullscreen ?? true;
-  const exitFullscreenAfterLock = options.exitFullscreenAfterLock ?? false;
-
-  let locked = await tryLockOrientation(target);
-
-  if (!locked && allowFullscreen) {
-    const enteredFullscreen = await tryRequestFullscreen();
-    if (enteredFullscreen) {
-      locked = await tryLockOrientation(target);
-    }
-  }
-
-  if (target === "portrait") {
-    if (typeof window !== "undefined" && window.screen.orientation?.unlock) {
-      try {
-        window.screen.orientation.unlock();
-      } catch {
-        // no-op
-      }
-    }
-
-    if (exitFullscreenAfterLock || !locked) {
-      await tryExitFullscreen();
-    }
   }
 }

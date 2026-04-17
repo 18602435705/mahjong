@@ -2,14 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { activateVoicePlayback } from "../actionAudio";
 import { useAuth } from "../auth/useAuth";
-import { applyPreferredOrientation } from "../orientation/screenOrientation";
 import "./LobbyPage.css";
-
-function wait(durationMs: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
-}
 
 export default function LobbyPage() {
   const navigate = useNavigate();
@@ -20,28 +13,24 @@ export default function LobbyPage() {
 
   const displayName = useMemo(() => user?.username ?? "游客", [user?.username]);
 
-  async function enterGame(message: string) {
+  function enterGame(message: string) {
     setFeedback(message);
     setIsBusy(true);
     activateVoicePlayback();
-    await applyPreferredOrientation("landscape", {
-      allowFullscreen: true,
-    });
-    await wait(320);
     navigate("/game");
   }
 
-  async function handleCreateRoom() {
-    await enterGame("房间创建成功，正在进入牌桌...");
+  function handleCreateRoom() {
+    enterGame("房间创建成功，正在进入牌桌...");
   }
 
-  async function handleJoinByCode() {
+  function handleJoinByCode() {
     const normalizedCode = joinCode.trim();
     if (!normalizedCode) {
       setFeedback("请输入房间号再加入");
       return;
     }
-    await enterGame(`正在加入房间 ${normalizedCode}...`);
+    enterGame(`正在加入房间 ${normalizedCode}...`);
   }
 
   function handleLogout() {

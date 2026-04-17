@@ -21,7 +21,8 @@
       "path": "apps/mahjong-server",
     },
   ],
-  "settings": {},
+  "settings": {
+  },
   "extensions": {
     "recommendations": [
       "esbenp.prettier-vscode",

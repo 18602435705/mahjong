@@ -40,6 +40,23 @@
   font-size: 0.9rem;
 }
 
+.orientation-action-btn {
+  margin-top: 14px;
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #203327;
+  background: linear-gradient(120deg, #f2cc86, #ffdfad);
+}
+
+.orientation-action-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .orientation-banner {
   position: fixed;
   left: 50%;
