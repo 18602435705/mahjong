@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
 import compression from "compression";
+import { appConfig } from "./config.js";
+import { initDatabase, pingDatabase } from "./db.js";
+import authRouter from "./routes/auth.js";
 
 const app = express();
-const port = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 app.use(cors());
@@ -22,18 +24,57 @@ app.use((req, _res, next) => {
   next();
 });
 
+app.use("/api/auth", authRouter);
+
 app.get("/", (_req, res) => {
   res.send("Hello from express-app");
 });
 
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    app: "express-app",
-    timestamp: new Date().toISOString(),
+app.get("/health", async (_req, res, next) => {
+  try {
+    const dbConnected = await pingDatabase();
+
+    res.json({
+      status: "ok",
+      app: "express-app",
+      db: dbConnected ? "connected" : "disconnected",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    status: "error",
+    message: "Not Found",
+    path: req.originalUrl,
   });
 });
 
-app.listen(port, () => {
-  console.log(`express-app listening on http://localhost:${port}`);
+app.use((error, _req, res, _next) => {
+  console.error(error);
+
+  if (res.headersSent) {
+    return;
+  }
+
+  res.status(500).json({
+    status: "error",
+    message: "Internal Server Error",
+  });
+});
+
+async function startServer() {
+  await initDatabase();
+
+  app.listen(appConfig.port, () => {
+    console.log(`express-app listening on http://localhost:${appConfig.port}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start express-app", error);
+  process.exit(1);
 });
