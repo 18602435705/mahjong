@@ -1,4 +1,4 @@
-# express-app
+# mahjong-server
 
 Monorepo 中的 Express 子应用，提供最小可运行 HTTP 服务。
 
@@ -13,13 +13,13 @@ pnpm install
 2. 启动开发模式（自动重启）：
 
 ```bash
-pnpm --filter express-app dev
+pnpm --filter mahjong-server dev
 ```
 
 3. 生产模式启动：
 
 ```bash
-pnpm --filter express-app start
+pnpm --filter mahjong-server start
 ```
 
 ## 用户系统能力

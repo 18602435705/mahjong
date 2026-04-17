@@ -1,14 +1,14 @@
 {
-  "name": "express-app",
+  "name": "mahjong-server",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "build": "echo \"No build step for express-app\"",
-    "lint": "echo \"No lint step for express-app\"",
-    "test": "echo \"No tests yet for express-app\""
+    "build": "echo \"No build step for mahjong-server\"",
+    "lint": "echo \"No lint step for mahjong-server\"",
+    "test": "echo \"No tests yet for mahjong-server\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

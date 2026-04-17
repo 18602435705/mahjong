@@ -124,7 +124,7 @@ importers:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@24.12.2)(less@4.5.1)(lightningcss@1.32.0)
 
-  apps/express-app:
+  apps/mahjong-server:
     dependencies:
       bcryptjs:
         specifier: ^3.0.2

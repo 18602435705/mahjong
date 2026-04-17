@@ -17,8 +17,8 @@
       "path": "apps/vite-react",
     },
     {
-      "name": "🚂 express-app",
-      "path": "apps/express-app",
+      "name": "🚂 mahjong-server",
+      "path": "apps/mahjong-server",
     },
   ],
   "settings": {},

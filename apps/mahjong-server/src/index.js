@@ -27,7 +27,7 @@ app.use((req, _res, next) => {
 app.use("/api/auth", authRouter);
 
 app.get("/", (_req, res) => {
-  res.send("Hello from express-app");
+  res.send("Hello from mahjong-server");
 });
 
 app.get("/health", async (_req, res, next) => {
@@ -36,7 +36,7 @@ app.get("/health", async (_req, res, next) => {
 
     res.json({
       status: "ok",
-      app: "express-app",
+      app: "mahjong-server",
       db: dbConnected ? "connected" : "disconnected",
       timestamp: new Date().toISOString(),
     });
@@ -70,11 +70,11 @@ async function startServer() {
   await initDatabase();
 
   app.listen(appConfig.port, () => {
-    console.log(`express-app listening on http://localhost:${appConfig.port}`);
+    console.log(`mahjong-server listening on http://localhost:${appConfig.port}`);
   });
 }
 
 startServer().catch((error) => {
-  console.error("Failed to start express-app", error);
+  console.error("Failed to start mahjong-server", error);
   process.exit(1);
 });
