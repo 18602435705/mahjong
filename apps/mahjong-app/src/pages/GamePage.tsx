@@ -1,6 +1,5 @@
 import BoardMeta from "../components/BoardMeta";
 import DiscardPool from "../components/DiscardPool";
-import HumanActionPanel from "../components/HumanActionPanel";
 import PlayerSeat from "../components/PlayerSeat";
 import { useAiStep } from "../hooks/useAiStep";
 import { useActionVoice } from "../hooks/useActionVoice";
@@ -25,7 +24,6 @@ export default function GamePage() {
         <PlayerSeat playerIndex={1} showHand={false} seatClass="seat-right" />
         <PlayerSeat playerIndex={0} showHand seatClass="seat-bottom" />
       </main>
-      <HumanActionPanel />
     </div>
   );
 }

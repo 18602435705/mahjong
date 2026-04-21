@@ -9,47 +9,27 @@
   animation: float-in 0.16s ease-out both;
 }
 
-.action-panel {
+.action-inline {
+  position: absolute;
+  right: 0;
+  top: auto;
+  bottom: calc(100% + clamp(4px, 0.6vw, 8px));
   width: fit-content;
-  max-width: 100%;
-  border-radius: 10px;
-  border: 1px solid rgba(185, 142, 83, 0.65);
-  background:
-    linear-gradient(
-      160deg,
-      rgba(253, 239, 214, 0.96),
-      rgba(239, 215, 176, 0.96)
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(117, 80, 41, 0.08),
-      rgba(117, 80, 41, 0.08) 1px,
-      transparent 1px,
-      transparent 6px
-    );
-  box-shadow: 0 10px 20px rgba(37, 20, 9, 0.32);
-  padding: clamp(6px, 1vw, 10px);
-}
-
-.action-panel h2 {
-  margin: 0 0 6px;
-  color: #50321b;
-  font-size: clamp(0.62rem, 1.18vw, 0.78rem);
-  font-family: var(--font-title);
-  letter-spacing: 0.04em;
-}
-
-.action-panel p {
-  margin: 0;
-  color: #6a4628;
-  font-size: clamp(0.5rem, 0.92vw, 0.62rem);
-  line-height: 1.3;
+  max-width: min(100%, 360px);
+  z-index: 8;
+  pointer-events: auto;
+  animation: float-in 0.16s ease-out both;
 }
 
 .action-buttons {
-  margin-top: 6px;
+  margin-top: 0;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
   gap: 5px;
 }
 
@@ -57,9 +37,12 @@
   border: 1px solid rgba(124, 82, 42, 0.5);
   border-radius: 8px;
   padding: 6px 10px;
+  max-width: 100%;
   font-size: clamp(0.62rem, 1.25vw, 0.8rem);
   font-weight: 600;
   font-family: var(--font-ui);
+  line-height: 1.25;
+  white-space: normal;
   cursor: pointer;
   color: #3f2918;
   background: linear-gradient(
@@ -120,7 +103,7 @@
 }
 
 .action-button-label {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .action-button-tile.tile-asset--chip {

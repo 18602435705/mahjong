@@ -3,7 +3,6 @@ import TileAsset from "./TileAsset";
 import {
   CLAIM_ACTION,
   GAME_ACTION,
-  tileToText,
   type ClaimRequest,
   type GameAction,
 } from "../mahjongEngine";
@@ -24,9 +23,6 @@ function ClaimDecisionActions({ currentClaims, dispatch }: ClaimDecisionActionsP
 
   return (
     <>
-      <p>
-        你可操作：{tileToText(tile)}
-      </p>
       <div className="action-buttons">
         {currentClaims.map((claim) => (
           <button

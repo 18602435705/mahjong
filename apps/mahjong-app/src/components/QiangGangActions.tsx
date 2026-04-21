@@ -2,7 +2,6 @@ import type { Dispatch } from "react";
 import TileAsset from "./TileAsset";
 import {
   GAME_ACTION,
-  tileToText,
   type GameAction,
   type Tile,
 } from "../mahjongEngine";
@@ -18,7 +17,6 @@ type QiangGangActionsProps = {
 function QiangGangActions({ tile, dispatch }: QiangGangActionsProps) {
   return (
     <>
-      <p>你可抢杠胡：{tileToText(tile)}</p>
       <div className="action-buttons">
         <button
           className="action-btn action-btn-hu"

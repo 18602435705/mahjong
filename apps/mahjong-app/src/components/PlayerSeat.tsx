@@ -1,11 +1,14 @@
 import { useCallback } from "react";
 import "./PlayerSeat.css";
+import HumanActionPanel from "./HumanActionPanel";
 import SeatHandRow from "./SeatHandRow";
 import SeatHeader from "./SeatHeader";
 import SeatHiddenHandRow from "./SeatHiddenHandRow";
 import SeatMeldList from "./SeatMeldList";
 import {
   GAME_ACTION,
+  getCurrentHumanClaims,
+  getCurrentQiangGangCandidate,
   getHumanTurnOptions,
   PHASE,
   type Tile,
@@ -70,6 +73,13 @@ function PlayerSeat(props: PlayerSeatProps) {
     state.currentPlayer === playerIndex && state.phase === PHASE.PLAYER_TURN;
   const shouldShowHand = showHand || state.phase === PHASE.GAME_OVER;
   const isRevealedAIHand = shouldShowHand && !showHand;
+  const currentHumanClaims = getCurrentHumanClaims(state);
+  const qiangGangCandidate = getCurrentQiangGangCandidate(state);
+  const isHumanActionPending =
+    playerIndex === 0 &&
+    ((state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0) ||
+      (state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0) ||
+      (state.phase === PHASE.QIANG_GANG_DECISION && qiangGangCandidate === 0));
   const isDealerOpeningTurn =
     playerIndex === 0 &&
     state.currentPlayer === 0 &&
@@ -130,15 +140,30 @@ function PlayerSeat(props: PlayerSeatProps) {
           />
         )}
 
-        {shouldShowHand && (
-          <SeatHandRow
-            normalHandEntries={normalHandEntries}
-            drawnEntry={drawnEntry}
-            canDiscard={canDiscard}
-            selectedTileKey={selectedTileKey}
-            onTileClick={playerIndex === 0 ? handleHumanTileClick : undefined}
-          />
-        )}
+        {shouldShowHand &&
+          (playerIndex === 0 ? (
+            <div
+              className={`human-hand-area ${
+                isHumanActionPending ? "human-hand-area-with-actions" : ""
+              }`}
+            >
+              <HumanActionPanel inline />
+              <SeatHandRow
+                normalHandEntries={normalHandEntries}
+                drawnEntry={drawnEntry}
+                canDiscard={canDiscard}
+                selectedTileKey={selectedTileKey}
+                onTileClick={handleHumanTileClick}
+              />
+            </div>
+          ) : (
+            <SeatHandRow
+              normalHandEntries={normalHandEntries}
+              drawnEntry={drawnEntry}
+              canDiscard={canDiscard}
+              selectedTileKey={selectedTileKey}
+            />
+          ))}
       </div>
     </section>
   );

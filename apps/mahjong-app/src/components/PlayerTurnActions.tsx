@@ -6,7 +6,6 @@ import {
   MELD_TYPE,
   getHumanTurnOptions,
   huSummaryText,
-  tileToText,
   winMethodText,
   type GameAction,
   type HuSpecialType,
@@ -25,12 +24,21 @@ type PlayerTurnActionsProps = {
  */
 function PlayerTurnActions(props: PlayerTurnActionsProps) {
   const { humanOptions, humanSelfHuMethod, humanSelfHuSpecials, dispatch } = props;
+  const selfHu = humanOptions.selfHu;
+  const selfHuTotalFan = selfHu
+    ? calculateWinTotalFan(selfHu, humanSelfHuMethod, humanSelfHuSpecials).totalFan
+    : 0;
+  const isPlainPingHu = selfHu?.type === "pinghu" && selfHu.overlays.length === 0;
+  const selfHuDetailText = selfHu
+    ? isPlainPingHu
+      ? `${selfHuTotalFan} 番`
+      : `${huSummaryText(selfHu)} ${selfHuTotalFan} 番`
+    : "";
 
   return (
     <>
-      <p>双击出牌</p>
       <div className="action-buttons">
-        {humanOptions.selfHu && (
+        {selfHu && (
           <button
             className="action-btn action-btn-hu"
             type="button"
@@ -39,13 +47,7 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
             {`${winMethodText(
               humanSelfHuMethod,
               humanSelfHuSpecials,
-            )}（${huSummaryText(humanOptions.selfHu)} ${
-              calculateWinTotalFan(
-                humanOptions.selfHu,
-                humanSelfHuMethod,
-                humanSelfHuSpecials,
-              ).totalFan
-            } 番）`}
+            )}（${selfHuDetailText}）`}
           </button>
         )}
         {humanOptions.anGangTiles.map((tile) => (
@@ -62,7 +64,7 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
             }
           >
             <span className="action-button-content">
-              <span className="action-button-label">暗杠 {tileToText(tile)}</span>
+              <span className="action-button-label">暗杠</span>
               <TileAsset tile={tile} size="chip" className="action-button-tile" />
             </span>
           </button>
@@ -81,7 +83,7 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
             }
           >
             <span className="action-button-content">
-              <span className="action-button-label">补杠 {tileToText(tile)}</span>
+              <span className="action-button-label">补杠</span>
               <TileAsset tile={tile} size="chip" className="action-button-tile" />
             </span>
           </button>

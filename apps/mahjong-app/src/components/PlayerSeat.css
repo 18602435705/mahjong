@@ -48,6 +48,7 @@
 
 .seat-bottom {
   grid-area: bottom;
+  overflow: visible;
 }
 
 .seat-header {
@@ -91,6 +92,23 @@
 
 .seat-main-row-human .hand-row {
   flex: 1 1 auto;
+}
+
+.human-hand-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: visible;
+}
+
+.human-hand-area-with-actions {
+  padding-top: 0;
+}
+
+.human-hand-area .hand-row {
+  width: 100%;
 }
 
 .seat-main-row-ai .hidden-hand-row {

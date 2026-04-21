@@ -13,10 +13,14 @@ import {
 } from "../mahjongEngine";
 import { useGameStore } from "../store/gameStore";
 
+type HumanActionPanelProps = {
+  inline?: boolean;
+};
+
 /**
- * 渲染人类玩家的可执行动作面板（出牌提示、胡/杠/碰/过等）。
+ * 渲染人类玩家的可执行动作按钮（胡/杠/碰/过等）。
  */
-function HumanActionPanel() {
+function HumanActionPanel({ inline = false }: HumanActionPanelProps) {
   const state = useGameStore((store) => store.game);
   const dispatch = useGameStore((store) => store.dispatch);
 
@@ -38,28 +42,25 @@ function HumanActionPanel() {
   }
 
   return (
-    <section className="action-float" aria-live="polite">
-      <div className="action-panel action-panel-floating">
-        <h2>操作</h2>
-        {state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0 && (
-          <PlayerTurnActions
-            humanOptions={humanOptions}
-            humanSelfHuMethod={humanSelfHuMethod}
-            humanSelfHuSpecials={humanSelfHuSpecials}
-            dispatch={dispatch}
-          />
-        )}
+    <section className={inline ? "action-inline" : "action-float"} aria-live="polite">
+      {state.phase === PHASE.PLAYER_TURN && state.currentPlayer === 0 && (
+        <PlayerTurnActions
+          humanOptions={humanOptions}
+          humanSelfHuMethod={humanSelfHuMethod}
+          humanSelfHuSpecials={humanSelfHuSpecials}
+          dispatch={dispatch}
+        />
+      )}
 
-        {state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0 && (
-          <ClaimDecisionActions currentClaims={currentHumanClaims} dispatch={dispatch} />
-        )}
+      {state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0 && (
+        <ClaimDecisionActions currentClaims={currentHumanClaims} dispatch={dispatch} />
+      )}
 
-        {state.phase === PHASE.QIANG_GANG_DECISION &&
-          qiangGangCandidate === 0 &&
-          state.qiangGang && (
-            <QiangGangActions tile={state.qiangGang.tile} dispatch={dispatch} />
-          )}
-      </div>
+      {state.phase === PHASE.QIANG_GANG_DECISION &&
+        qiangGangCandidate === 0 &&
+        state.qiangGang && (
+          <QiangGangActions tile={state.qiangGang.tile} dispatch={dispatch} />
+        )}
     </section>
   );
 }
