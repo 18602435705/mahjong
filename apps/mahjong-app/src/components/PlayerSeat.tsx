@@ -114,6 +114,8 @@ function PlayerSeat(props: PlayerSeatProps) {
   return (
     <section
       className={`seat ${seatClass} ${isCurrent ? "current" : ""} ${
+        isHumanActionPending ? "human-turn-active" : ""
+      } ${
         isRevealedAIHand ? "revealed-ai-hand" : ""
       }`}
     >
