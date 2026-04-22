@@ -1,3 +1,4 @@
+import { memo } from "react";
 import "./TileAsset.css";
 import { SUIT, tileToText, type Tile } from "../mahjongEngine";
 
@@ -323,4 +324,4 @@ function TileAsset(props: TileAssetProps) {
   );
 }
 
-export default TileAsset;
+export default memo(TileAsset);

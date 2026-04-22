@@ -1,3 +1,4 @@
+import { memo } from "react";
 import TileAsset from "./TileAsset";
 
 type SeatHiddenHandRowProps = {
@@ -21,4 +22,4 @@ function SeatHiddenHandRow({ title, playerIndex, handCount }: SeatHiddenHandRowP
   );
 }
 
-export default SeatHiddenHandRow;
+export default memo(SeatHiddenHandRow);
