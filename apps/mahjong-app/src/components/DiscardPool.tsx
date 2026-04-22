@@ -1,6 +1,6 @@
 import "./DiscardPool.css";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TileAsset from "./TileAsset";
 import DiscardLane, { type DiscardFlightState } from "./DiscardLane";
 import { useGameStore } from "../store/gameStore";
@@ -18,7 +18,7 @@ function DiscardPool() {
   const previousDiscardLengthsRef = useRef<number[] | null>(null);
   const [flight, setFlight] = useState<DiscardFlightState | null>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const currentLengths = state.players.map((player) => player.discards.length);
     const previousLengths = previousDiscardLengthsRef.current;
 

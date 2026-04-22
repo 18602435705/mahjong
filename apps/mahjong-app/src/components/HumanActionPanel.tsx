@@ -25,6 +25,24 @@ type HumanActionPanelProps = {
 const ALL_TILES: Tile[] = [SUIT.WAN, SUIT.BAMBOO, SUIT.DOT].flatMap((suit) =>
   Array.from({ length: 9 }, (_, index) => `${suit}${index + 1}` as Tile),
 );
+const TING_HU_CACHE_LIMIT = 240;
+const tingHuCache = new Map<string, Tile[]>();
+
+function setTingHuCache(
+  cache: Map<string, Tile[]>,
+  key: string,
+  tiles: Tile[],
+) {
+  cache.set(key, tiles);
+  if (cache.size <= TING_HU_CACHE_LIMIT) {
+    return;
+  }
+
+  const oldestKey = cache.keys().next().value;
+  if (oldestKey) {
+    cache.delete(oldestKey);
+  }
+}
 
 /**
  * 渲染人类玩家的可执行动作按钮（胡/杠/碰/过等）。
@@ -43,9 +61,14 @@ function HumanActionPanel({ inline = false }: HumanActionPanelProps) {
   const humanSelfHuSpecials =
     humanOptions.selfHuSpecials ?? getSelfHuSpecials(state, 0);
   const humanHandSignature = human.hand.join("|");
-  const selectedTileKey =
-    humanOptions.canDiscard && selectedDiscard?.handSignature === humanHandSignature
-      ? selectedDiscard.key
+  const selectedDiscardState =
+    humanOptions.canDiscard &&
+    selectedDiscard?.handSignature === humanHandSignature
+      ? selectedDiscard
+      : null;
+  const selectedTileIndex =
+    typeof selectedDiscardState?.index === "number"
+      ? selectedDiscardState.index
       : null;
 
   const isHumanActionPending =
@@ -54,42 +77,43 @@ function HumanActionPanel({ inline = false }: HumanActionPanelProps) {
     (state.phase === PHASE.QIANG_GANG_DECISION && qiangGangCandidate === 0);
   const tingHuTiles = useMemo(() => {
     if (
-      !selectedTileKey ||
+      selectedTileIndex === null ||
       state.phase === PHASE.GAME_OVER ||
       human.hand.length % 3 !== 2
     ) {
       return [] as Tile[];
     }
 
-    const splitIndex = selectedTileKey.lastIndexOf("-");
-    if (splitIndex <= 0) {
+    if (selectedTileIndex < 0 || selectedTileIndex >= human.hand.length) {
       return [] as Tile[];
     }
 
-    const selectedTile = selectedTileKey.slice(0, splitIndex) as Tile;
-    const selectedIndex = Number(selectedTileKey.slice(splitIndex + 1));
-    if (
-      !Number.isInteger(selectedIndex) ||
-      selectedIndex < 0 ||
-      selectedIndex >= human.hand.length ||
-      human.hand[selectedIndex] !== selectedTile
-    ) {
-      return [] as Tile[];
+    const remainingHand = human.hand.filter(
+      (_, index) => index !== selectedTileIndex,
+    );
+    const cacheKey = `${remainingHand.join("|")}#${human.melds.length}`;
+    const cachedTiles = tingHuCache.get(cacheKey);
+    if (cachedTiles) {
+      return cachedTiles;
     }
 
-    const remainingHand = human.hand.filter((_, index) => index !== selectedIndex);
-
-    return ALL_TILES.filter(
+    const resolvedTiles = ALL_TILES.filter(
       (tile) => evaluateHu([...remainingHand, tile], human.melds) !== null,
     );
-  }, [selectedTileKey, state.phase, human.hand, human.melds]);
+    setTingHuCache(tingHuCache, cacheKey, resolvedTiles);
+
+    return resolvedTiles;
+  }, [selectedTileIndex, state.phase, human.hand, human.melds]);
 
   if (!isHumanActionPending && tingHuTiles.length === 0) {
     return null;
   }
 
   return (
-    <section className={inline ? "action-inline" : "action-float"} aria-live="polite">
+    <section
+      className={inline ? "action-inline" : "action-float"}
+      aria-live="polite"
+    >
       <div className="action-row">
         {tingHuTiles.length > 0 && (
           <aside className="action-ting-hint" aria-label="听牌可胡列表">
@@ -116,9 +140,13 @@ function HumanActionPanel({ inline = false }: HumanActionPanelProps) {
           />
         )}
 
-        {state.phase === PHASE.CLAIM_DECISION && currentHumanClaims.length > 0 && (
-          <ClaimDecisionActions currentClaims={currentHumanClaims} dispatch={dispatch} />
-        )}
+        {state.phase === PHASE.CLAIM_DECISION &&
+          currentHumanClaims.length > 0 && (
+            <ClaimDecisionActions
+              currentClaims={currentHumanClaims}
+              dispatch={dispatch}
+            />
+          )}
 
         {state.phase === PHASE.QIANG_GANG_DECISION &&
           qiangGangCandidate === 0 &&

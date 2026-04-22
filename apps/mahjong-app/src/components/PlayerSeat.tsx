@@ -56,6 +56,7 @@ function PlayerSeat(props: PlayerSeatProps) {
 
       setSelectedDiscard({
         key,
+        index,
         handSignature: humanHandSignature,
       });
     },
