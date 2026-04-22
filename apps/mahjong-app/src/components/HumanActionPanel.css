@@ -21,14 +21,58 @@
   animation: float-in 0.16s ease-out both;
 }
 
+.action-ting-hint {
+  margin-left: 0;
+  margin-bottom: 0;
+  max-width: min(68vw, 420px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(223, 187, 124, 0.54);
+  background: rgba(30, 69, 47, 0.7);
+  pointer-events: none;
+}
+
+.action-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.action-ting-hint-label {
+  flex: 0 0 auto;
+  color: #f2deb2;
+  font-size: clamp(0.52rem, 0.95vw, 0.66rem);
+  letter-spacing: 0.04em;
+}
+
+.action-ting-hint-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-width: 0;
+}
+
+.action-ting-hint-tile.tile-asset--chip {
+  width: clamp(14px, 1.7vw, 22px);
+  height: clamp(19px, 2.35vw, 30px);
+}
+
 .action-buttons {
   margin-top: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   max-width: 100%;
+  min-width: 0;
   overflow: visible;
   gap: 5px;
 }

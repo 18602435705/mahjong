@@ -51,6 +51,11 @@
   overflow: visible;
 }
 
+.seat-bottom .seat-header {
+  justify-content: flex-start;
+  gap: 20px;
+}
+
 .seat-bottom.human-turn-active {
   border-color: rgba(236, 203, 139, 0.96);
   box-shadow:
@@ -228,6 +233,10 @@
   overflow: hidden;
 }
 
+.seat-bottom .hand-row {
+  overflow: visible;
+}
+
 .meld-item {
   display: inline-flex;
   align-items: center;
@@ -262,8 +271,8 @@
 .tile.hand {
   cursor: pointer;
   transition:
-    transform 0.12s ease,
-    filter 0.12s ease;
+    transform 0.2s ease,
+    filter 0.2s ease;
 }
 
 .tile.hand:hover:not(:disabled) {
@@ -271,12 +280,16 @@
 }
 
 .tile.hand.selected {
-  transform: translateY(-3px);
+  transform: translateY(-6px);
   filter: brightness(1.08);
 }
 
 .tile.hand.drawn {
   transform: translateY(-1px);
+}
+
+.tile.hand.drawn.selected {
+  transform: translateY(-6px);
 }
 
 .tile.hand:disabled {
