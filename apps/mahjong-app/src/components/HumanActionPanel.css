@@ -153,7 +153,6 @@
 .action-button-tile.tile-asset--chip {
   width: clamp(12px, 1.4vw, 18px);
   height: clamp(16px, 1.95vw, 24px);
-  filter: drop-shadow(0 1px 1px rgba(33, 18, 9, 0.28));
 }
 
 @keyframes float-in {
