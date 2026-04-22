@@ -29,6 +29,8 @@ function SeatMeldList({ melds, seatClass, shouldShowHand }: SeatMeldListProps) {
         : seatClass === "seat-left"
           ? -8
           : 8;
+  const meldEnterOffsetX = meldEnterOffset.x;
+  const meldEnterOffsetY = meldEnterOffset.y;
 
   return (
     <div className="melds">
@@ -41,73 +43,38 @@ function SeatMeldList({ melds, seatClass, shouldShowHand }: SeatMeldListProps) {
             <motion.span
               key={`${meld.type}-${meld.tile}-${idx}`}
               className="meld-item"
-              layout="position"
               initial={
                 prefersReducedMotion
                   ? false
                   : {
                       opacity: 0,
-                      scale: 0.58,
-                      x: meldEnterOffset.x,
-                      y: meldEnterOffset.y,
-                      rotate: meldEnterRotate,
-                      filter: "brightness(1.6) saturate(1.2)",
+                      scale: 0.92,
+                      x: meldEnterOffsetX,
+                      y: meldEnterOffsetY,
+                      rotate: meldEnterRotate * 0.3,
                     }
               }
               animate={{
                 opacity: 1,
-                scale: [1.18, 0.95, 1],
+                scale: 1,
                 x: 0,
                 y: 0,
-                rotate: [meldEnterRotate * 0.5, 0],
-                filter: [
-                  "brightness(1.5) saturate(1.18)",
-                  "brightness(1.08) saturate(1.06)",
-                  "brightness(1) saturate(1)",
-                ],
+                rotate: 0,
               }}
               exit={
                 prefersReducedMotion
                   ? { opacity: 0 }
                   : {
                       opacity: 0,
-                      scale: 0.86,
-                      x: meldEnterOffset.x * 0.45,
-                      y: meldEnterOffset.y * 0.45,
-                      rotate: meldEnterRotate * 0.35,
+                      scale: 0.96,
+                      x: meldEnterOffsetX * 0.25,
+                      y: meldEnterOffsetY * 0.25,
+                      rotate: meldEnterRotate * 0.2,
                     }
               }
               transition={{
-                layout: {
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 36,
-                  mass: 0.72,
-                },
-                opacity: { duration: 0.22, ease: "easeOut" },
-                x: {
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 28,
-                  mass: 0.72,
-                },
-                y: {
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 28,
-                  mass: 0.72,
-                },
-                rotate: { duration: 0.42, ease: [0.2, 0.85, 0.2, 1] },
-                scale: {
-                  duration: 0.44,
-                  ease: [0.22, 0.9, 0.22, 1],
-                  times: [0, 0.58, 1],
-                },
-                filter: {
-                  duration: 0.42,
-                  ease: "easeOut",
-                  times: [0, 0.45, 1],
-                },
+                duration: 0.2,
+                ease: "easeOut",
               }}
             >
               <span className="meld-label">{meldTypeText(meld.type)}</span>
