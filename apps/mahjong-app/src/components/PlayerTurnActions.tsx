@@ -42,7 +42,9 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
           <button
             className="action-btn action-btn-hu"
             type="button"
-            onClick={() => dispatch({ type: GAME_ACTION.HUMAN_SELF_HU })}
+            onClick={() =>
+              dispatch({ type: GAME_ACTION.PLAYER_SELF_HU, actor: 0 })
+            }
           >
             {`${winMethodText(
               humanSelfHuMethod,
@@ -57,7 +59,8 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
             type="button"
             onClick={() =>
               dispatch({
-                type: GAME_ACTION.HUMAN_GANG,
+                type: GAME_ACTION.PLAYER_GANG,
+                actor: 0,
                 gangType: MELD_TYPE.AN_GANG,
                 tile,
               })
@@ -76,7 +79,8 @@ function PlayerTurnActions(props: PlayerTurnActionsProps) {
             type="button"
             onClick={() =>
               dispatch({
-                type: GAME_ACTION.HUMAN_GANG,
+                type: GAME_ACTION.PLAYER_GANG,
+                actor: 0,
                 gangType: MELD_TYPE.BU_GANG,
                 tile,
               })

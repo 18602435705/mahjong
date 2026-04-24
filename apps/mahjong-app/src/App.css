@@ -1,3 +1,35 @@
 @import "./styles/app-shell.css";
 @import "./styles/table-layout.css";
 @import "./styles/common-ui.css";
+
+.room-lobby-panel {
+  width: min(680px, 92vw);
+  margin: 18px auto 0;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 16, 28, 0.72);
+  color: #eef4ff;
+}
+
+.room-seat-list {
+  margin: 12px 0;
+  padding-left: 18px;
+}
+
+.room-lobby-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.room-lobby-actions button {
+  min-width: 104px;
+}
+
+.room-connection-error {
+  margin: 10px auto 0;
+  width: min(680px, 92vw);
+  color: #ffd3d3;
+  font-size: 13px;
+}

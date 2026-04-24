@@ -4,27 +4,25 @@ import compression from "compression";
 import { appConfig } from "./config.js";
 import { initDatabase, pingDatabase } from "./db.js";
 import authRouter from "./routes/auth.js";
+import roomsRouter from "./routes/rooms.js";
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-app.use(compression());
-app.use((req, _res, next) => {
-  const authHeader = req.headers.authorization;
-  let token = null;
-
-  if (authHeader && typeof authHeader === "string") {
-    // Support either `Bearer <token>` or raw token.
-    const match = authHeader.match(/^Bearer\s+(.+)$/i);
-    token = match ? match[1] : authHeader;
-  }
-
-  req.token = token;
-  next();
-});
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path?.endsWith("/events")) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  }),
+);
 
 app.use("/api/auth", authRouter);
+app.use("/api/rooms", roomsRouter);
 
 app.get("/", (_req, res) => {
   res.send("Hello from mahjong-server");

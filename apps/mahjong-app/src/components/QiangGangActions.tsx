@@ -23,7 +23,8 @@ function QiangGangActions({ tile, dispatch }: QiangGangActionsProps) {
           type="button"
           onClick={() =>
             dispatch({
-              type: GAME_ACTION.HUMAN_QIANG_GANG_DECISION,
+              type: GAME_ACTION.PLAYER_QIANG_GANG_DECISION,
+              actor: 0,
               accept: true,
             })
           }
@@ -38,7 +39,8 @@ function QiangGangActions({ tile, dispatch }: QiangGangActionsProps) {
           type="button"
           onClick={() =>
             dispatch({
-              type: GAME_ACTION.HUMAN_QIANG_GANG_DECISION,
+              type: GAME_ACTION.PLAYER_QIANG_GANG_DECISION,
+              actor: 0,
               accept: false,
             })
           }

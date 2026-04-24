@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { activateVoicePlayback } from "../actionAudio";
+import { joinRoomApi, createRoomApi } from "../api/rooms";
 import { useAuth } from "../auth/useAuth";
 import "./LobbyPage.css";
 
@@ -13,24 +14,45 @@ export default function LobbyPage() {
 
   const displayName = useMemo(() => user?.username ?? "游客", [user?.username]);
 
-  function enterGame(message: string) {
-    setFeedback(message);
+  async function handleCreateRoom() {
     setIsBusy(true);
-    activateVoicePlayback();
-    navigate("/game");
+    setFeedback("正在创建房间...");
+
+    try {
+      const response = await createRoomApi();
+      const roomCode = response.room.code;
+      activateVoicePlayback();
+      setFeedback(`房间 ${roomCode} 创建成功，正在进入...`);
+      navigate(`/game?room=${encodeURIComponent(roomCode)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "创建房间失败";
+      setFeedback(message);
+    } finally {
+      setIsBusy(false);
+    }
   }
 
-  function handleCreateRoom() {
-    enterGame("房间创建成功，正在进入牌桌...");
-  }
-
-  function handleJoinByCode() {
-    const normalizedCode = joinCode.trim();
+  async function handleJoinByCode() {
+    const normalizedCode = joinCode.trim().toUpperCase();
     if (!normalizedCode) {
       setFeedback("请输入房间号再加入");
       return;
     }
-    enterGame(`正在加入房间 ${normalizedCode}...`);
+
+    setIsBusy(true);
+    setFeedback(`正在加入房间 ${normalizedCode}...`);
+
+    try {
+      const response = await joinRoomApi(normalizedCode);
+      const roomCode = response.room.code;
+      activateVoicePlayback();
+      navigate(`/game?room=${encodeURIComponent(roomCode)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "加入房间失败";
+      setFeedback(message);
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   function handleLogout() {
@@ -55,7 +77,7 @@ export default function LobbyPage() {
         <section className="lobby-panel action-panel">
           <div className="panel-head">
             <h2>快速操作</h2>
-            <span>本地模拟</span>
+            <span>联机模式</span>
           </div>
 
           <button
@@ -76,7 +98,7 @@ export default function LobbyPage() {
                   setFeedback("");
                   setJoinCode(event.target.value);
                 }}
-                placeholder="例如 east-001"
+                placeholder="例如 123456"
               />
               <button
                 type="button"
@@ -87,15 +109,6 @@ export default function LobbyPage() {
               </button>
             </div>
           </label>
-
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={isBusy}
-            onClick={() => void enterGame("正在进入牌桌...")}
-          >
-            直接进入游戏
-          </button>
 
           {feedback ? <p className="feedback">{feedback}</p> : null}
         </section>

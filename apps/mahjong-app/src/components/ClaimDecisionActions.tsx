@@ -37,7 +37,8 @@ function ClaimDecisionActions({ currentClaims, dispatch }: ClaimDecisionActionsP
             type="button"
             onClick={() =>
               dispatch({
-                type: GAME_ACTION.HUMAN_CLAIM_DECISION,
+                type: GAME_ACTION.PLAYER_CLAIM_DECISION,
+                actor: 0,
                 accept: true,
                 claimAction: claim.action,
               })
@@ -60,7 +61,8 @@ function ClaimDecisionActions({ currentClaims, dispatch }: ClaimDecisionActionsP
           type="button"
           onClick={() =>
             dispatch({
-              type: GAME_ACTION.HUMAN_CLAIM_DECISION,
+              type: GAME_ACTION.PLAYER_CLAIM_DECISION,
+              actor: 0,
               accept: false,
             })
           }

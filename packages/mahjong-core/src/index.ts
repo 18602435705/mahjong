@@ -26,7 +26,7 @@ export const MELD_TYPE = {
   BU_GANG: "buGang",
 } as const;
 export type MeldType = (typeof MELD_TYPE)[keyof typeof MELD_TYPE];
-type HumanGangType = typeof MELD_TYPE.AN_GANG | typeof MELD_TYPE.BU_GANG;
+type PlayerGangType = typeof MELD_TYPE.AN_GANG | typeof MELD_TYPE.BU_GANG;
 
 export interface Meld {
   type: MeldType;
@@ -141,11 +141,6 @@ export const GAME_ACTION = {
   PLAYER_GANG: "PLAYER_GANG",
   PLAYER_CLAIM_DECISION: "PLAYER_CLAIM_DECISION",
   PLAYER_QIANG_GANG_DECISION: "PLAYER_QIANG_GANG_DECISION",
-  HUMAN_DISCARD: "HUMAN_DISCARD",
-  HUMAN_SELF_HU: "HUMAN_SELF_HU",
-  HUMAN_GANG: "HUMAN_GANG",
-  HUMAN_CLAIM_DECISION: "HUMAN_CLAIM_DECISION",
-  HUMAN_QIANG_GANG_DECISION: "HUMAN_QIANG_GANG_DECISION",
   AI_STEP: "AI_STEP",
 } as const;
 
@@ -157,7 +152,7 @@ export type GameAction =
   | {
       type: typeof GAME_ACTION.PLAYER_GANG;
       actor: number;
-      gangType: HumanGangType;
+      gangType: PlayerGangType;
       tile: Tile;
     }
   | {
@@ -171,15 +166,6 @@ export type GameAction =
       actor: number;
       accept: boolean;
     }
-  | { type: typeof GAME_ACTION.HUMAN_DISCARD; tile: Tile }
-  | { type: typeof GAME_ACTION.HUMAN_SELF_HU }
-  | { type: typeof GAME_ACTION.HUMAN_GANG; gangType: HumanGangType; tile: Tile }
-  | {
-      type: typeof GAME_ACTION.HUMAN_CLAIM_DECISION;
-      accept: boolean;
-      claimAction?: ClaimAction;
-    }
-  | { type: typeof GAME_ACTION.HUMAN_QIANG_GANG_DECISION; accept: boolean }
   | { type: typeof GAME_ACTION.AI_STEP };
 
 const DRAW_SOURCE = {
@@ -584,21 +570,6 @@ type PlayerQiangGangDecisionAction = Extract<
   GameAction,
   { type: typeof GAME_ACTION.PLAYER_QIANG_GANG_DECISION }
 >;
-type HumanDiscardAction = Extract<
-  GameAction,
-  { type: typeof GAME_ACTION.HUMAN_DISCARD }
->;
-type HumanGangAction = Extract<GameAction, { type: typeof GAME_ACTION.HUMAN_GANG }>;
-type HumanClaimDecisionAction = Extract<
-  GameAction,
-  { type: typeof GAME_ACTION.HUMAN_CLAIM_DECISION }
->;
-type HumanQiangGangDecisionAction = Extract<
-  GameAction,
-  { type: typeof GAME_ACTION.HUMAN_QIANG_GANG_DECISION }
->;
-
-const HUMAN_PLAYER_INDEX = 0;
 
 function resolvePresetId(presetId?: InitialDealPresetId) {
   return presetId ?? INITIAL_DEAL_PRESET.RANDOM;
@@ -689,56 +660,6 @@ function reducePlayerQiangGangDecision(
   return passQiangGangHu(state);
 }
 
-function reduceHumanDiscard(
-  state: GameState,
-  action: HumanDiscardAction,
-): GameState {
-  return reducePlayerDiscard(state, {
-    type: GAME_ACTION.PLAYER_DISCARD,
-    actor: HUMAN_PLAYER_INDEX,
-    tile: action.tile,
-  });
-}
-
-function reduceHumanSelfHu(state: GameState): GameState {
-  return reducePlayerSelfHu(state, {
-    type: GAME_ACTION.PLAYER_SELF_HU,
-    actor: HUMAN_PLAYER_INDEX,
-  });
-}
-
-function reduceHumanGang(state: GameState, action: HumanGangAction): GameState {
-  return reducePlayerGang(state, {
-    type: GAME_ACTION.PLAYER_GANG,
-    actor: HUMAN_PLAYER_INDEX,
-    gangType: action.gangType,
-    tile: action.tile,
-  });
-}
-
-function reduceHumanClaimDecision(
-  state: GameState,
-  action: HumanClaimDecisionAction,
-): GameState {
-  return reducePlayerClaimDecision(state, {
-    type: GAME_ACTION.PLAYER_CLAIM_DECISION,
-    actor: HUMAN_PLAYER_INDEX,
-    accept: action.accept,
-    claimAction: action.claimAction,
-  });
-}
-
-function reduceHumanQiangGangDecision(
-  state: GameState,
-  action: HumanQiangGangDecisionAction,
-): GameState {
-  return reducePlayerQiangGangDecision(state, {
-    type: GAME_ACTION.PLAYER_QIANG_GANG_DECISION,
-    actor: HUMAN_PLAYER_INDEX,
-    accept: action.accept,
-  });
-}
-
 function assertNever(action: never): never {
   throw new Error(`Unhandled action: ${JSON.stringify(action)}`);
 }
@@ -759,16 +680,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return reducePlayerClaimDecision(state, action);
     case GAME_ACTION.PLAYER_QIANG_GANG_DECISION:
       return reducePlayerQiangGangDecision(state, action);
-    case GAME_ACTION.HUMAN_DISCARD:
-      return reduceHumanDiscard(state, action);
-    case GAME_ACTION.HUMAN_SELF_HU:
-      return reduceHumanSelfHu(state);
-    case GAME_ACTION.HUMAN_GANG:
-      return reduceHumanGang(state, action);
-    case GAME_ACTION.HUMAN_CLAIM_DECISION:
-      return reduceHumanClaimDecision(state, action);
-    case GAME_ACTION.HUMAN_QIANG_GANG_DECISION:
-      return reduceHumanQiangGangDecision(state, action);
     case GAME_ACTION.AI_STEP:
       return runAIStep(state);
     default:

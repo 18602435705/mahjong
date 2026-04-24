@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { appConfig } from "../config.js";
 import { getDbPool } from "../db.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = Router();
 
@@ -25,26 +26,6 @@ function signToken(user) {
       expiresIn: appConfig.jwtExpiresIn,
     },
   );
-}
-
-function requireToken(req, res, next) {
-  if (!req.token) {
-    res.status(401).json({
-      status: "error",
-      message: "Missing authorization token",
-    });
-    return;
-  }
-
-  try {
-    req.auth = jwt.verify(req.token, appConfig.jwtSecret);
-    next();
-  } catch {
-    res.status(401).json({
-      status: "error",
-      message: "Invalid or expired token",
-    });
-  }
 }
 
 router.post("/register", async (req, res) => {
@@ -161,7 +142,7 @@ router.post("/login", async (req, res) => {
   });
 });
 
-router.get("/me", requireToken, async (req, res) => {
+router.get("/me", requireAuth, async (req, res) => {
   const userId = Number(req.auth.sub);
 
   if (!Number.isFinite(userId)) {

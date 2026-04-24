@@ -49,7 +49,7 @@ function PlayerSeat(props: PlayerSeatProps) {
 
       const key = `${tile}-${index}`;
       if (selectedTileKey === key) {
-        dispatch({ type: GAME_ACTION.HUMAN_DISCARD, tile });
+        dispatch({ type: GAME_ACTION.PLAYER_DISCARD, actor: 0, tile });
         setSelectedDiscard(null);
         return;
       }

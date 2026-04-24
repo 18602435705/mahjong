@@ -1,11 +1,7 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
-import * as Select from "@radix-ui/react-select";
 import { useNavigate } from "react-router-dom";
-import {
-  INITIAL_DEAL_PRESET_OPTIONS,
-  type InitialDealPresetId,
-} from "../mahjongEngine";
+import { leaveRoomApi } from "../api/rooms";
 import { selectStatusText } from "../store/gameSelectors";
 import { useGameStore } from "../store/gameStore";
 
@@ -15,13 +11,28 @@ import { useGameStore } from "../store/gameStore";
 function BoardMeta() {
   const navigate = useNavigate();
   const round = useGameStore((store) => store.game.round);
-  const statusText = useGameStore((store) => selectStatusText(store.game));
-  const selectedPresetId = useGameStore((store) => store.selectedPresetId);
-  const selectPreset = useGameStore((store) => store.selectPreset);
+  const roomCode = useGameStore((store) => store.roomCode);
+  const roomStatus = useGameStore((store) => store.roomStatus);
+  const statusText = useGameStore((store) => {
+    if (store.roomStatus === "lobby") {
+      return "房间中：等待全部玩家准备并开局";
+    }
+    return selectStatusText(store.game);
+  });
   const nextRound = useGameStore((store) => store.nextRound);
   const resetGame = useGameStore((store) => store.resetGame);
+  const clearRoomSession = useGameStore((store) => store.clearRoomSession);
 
-  function handleBackLobby() {
+  async function handleBackLobby() {
+    if (roomCode) {
+      try {
+        await leaveRoomApi(roomCode);
+      } catch {
+        // noop
+      } finally {
+        clearRoomSession();
+      }
+    }
     navigate("/lobby");
   }
 
@@ -40,18 +51,28 @@ function BoardMeta() {
                 <button
                   type="button"
                   className="menu-item btn-nav"
-                  onClick={handleBackLobby}
+                  onClick={() => void handleBackLobby()}
                 >
                   返回大厅
                 </button>
               </Popover.Close>
               <Popover.Close asChild>
-                <button type="button" className="menu-item btn-main" onClick={nextRound}>
+                <button
+                  type="button"
+                  className="menu-item btn-main"
+                  onClick={nextRound}
+                  disabled={roomStatus === "lobby"}
+                >
                   再来一局
                 </button>
               </Popover.Close>
               <Popover.Close asChild>
-                <button type="button" className="menu-item btn-sub" onClick={resetGame}>
+                <button
+                  type="button"
+                  className="menu-item btn-sub"
+                  onClick={resetGame}
+                  disabled={roomStatus === "lobby"}
+                >
                   重置积分
                 </button>
               </Popover.Close>
@@ -63,42 +84,7 @@ function BoardMeta() {
       <div className="meta-status" aria-live="polite">
         {statusText}
       </div>
-      <div className="preset-picker">
-        <span className="preset-label">牌局</span>
-        <Select.Root
-          value={selectedPresetId}
-          onValueChange={(value) => selectPreset(value as InitialDealPresetId)}
-        >
-          <Select.Trigger className="preset-select-trigger" aria-label="选择初始牌局预设">
-            <Select.Value />
-            <Select.Icon className="preset-select-icon">▾</Select.Icon>
-          </Select.Trigger>
-
-          <Select.Portal>
-            <Select.Content
-              className="preset-select-content"
-              position="popper"
-              sideOffset={8}
-              align="start"
-            >
-              <Select.Viewport className="preset-select-viewport">
-                {INITIAL_DEAL_PRESET_OPTIONS.map((option) => (
-                  <Select.Item
-                    key={option.id}
-                    value={option.id}
-                    className="preset-select-item"
-                  >
-                    <Select.ItemText>{option.label}</Select.ItemText>
-                    <Select.ItemIndicator className="preset-select-item-indicator">
-                      ✓
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.Viewport>
-            </Select.Content>
-          </Select.Portal>
-        </Select.Root>
-      </div>
+      {roomCode ? <div className="meta-chip">房间 {roomCode}</div> : null}
     </section>
   );
 }
