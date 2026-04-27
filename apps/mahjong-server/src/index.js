@@ -1,3 +1,4 @@
+import http from "node:http";
 import express from "express";
 import cors from "cors";
 import compression from "compression";
@@ -5,21 +6,13 @@ import { appConfig } from "./config.js";
 import { initDatabase, pingDatabase } from "./db.js";
 import authRouter from "./routes/auth.js";
 import roomsRouter from "./routes/rooms.js";
+import { attachSocketServer } from "./realtime/socketServer.js";
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-app.use(
-  compression({
-    filter: (req, res) => {
-      if (req.path?.endsWith("/events")) {
-        return false;
-      }
-      return compression.filter(req, res);
-    },
-  }),
-);
+app.use(compression());
 
 app.use("/api/auth", authRouter);
 app.use("/api/rooms", roomsRouter);
@@ -66,8 +59,10 @@ app.use((error, _req, res, _next) => {
 
 async function startServer() {
   await initDatabase();
+  const httpServer = http.createServer(app);
+  attachSocketServer(httpServer);
 
-  app.listen(appConfig.port, () => {
+  httpServer.listen(appConfig.port, () => {
     console.log(`mahjong-server listening on http://localhost:${appConfig.port}`);
   });
 }

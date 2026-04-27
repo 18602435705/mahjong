@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getRoomApi, getRoomEventsUrl, postRoomActionApi } from "../api/rooms";
+import { io, type Socket } from "socket.io-client";
+import { API_BASE_URL } from "../api/client";
 import { GAME_ACTION, type GameAction } from "../mahjongEngine";
 import { useGameStore } from "../store/gameStore";
 import { useAuth } from "../auth/useAuth";
 import type { RoomSnapshot } from "../types/room";
 
+interface SocketErrorResponse {
+  status: "error";
+  code?: number;
+  message: string;
+}
+
+type SocketAckResponse<T extends object = Record<string, never>> =
+  | ({ status: "ok" } & T)
+  | SocketErrorResponse;
+
+/**
+ * 判断任意值是否满足房间快照的最小结构要求。
+ */
 function isRoomSnapshot(value: unknown): value is RoomSnapshot {
   if (!value || typeof value !== "object") {
     return false;
@@ -19,17 +33,63 @@ function isRoomSnapshot(value: unknown): value is RoomSnapshot {
   );
 }
 
-function parseRoomUpdate(rawData: string): RoomSnapshot | null {
-  const payload = JSON.parse(rawData) as {
-    status?: string;
+/**
+ * 从服务端推送包中提取房间快照；结构不合法时返回 null。
+ */
+function parseRoomUpdate(payload: unknown): RoomSnapshot | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const envelope = payload as {
     room?: unknown;
   };
 
-  return isRoomSnapshot(payload.room) ? payload.room : null;
+  return isRoomSnapshot(envelope.room) ? envelope.room : null;
 }
 
 /**
- * 在房间模式下同步服务端状态，并将本地动作转发给服务端。
+ * 归一化 Ack 错误文案，优先使用服务端返回的 message。
+ */
+function normalizeAckError(response: SocketErrorResponse | null, fallback: string) {
+  if (!response?.message) {
+    return fallback;
+  }
+
+  return response.message;
+}
+
+/**
+ * 发送 Socket 事件并等待 Ack，内置超时保护。
+ */
+function emitWithAck<TPayload extends object, TResult extends object>(
+  socket: Socket,
+  event: string,
+  payload: TPayload,
+): Promise<SocketAckResponse<TResult>> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Socket request timeout"));
+    }, 10000);
+
+    socket.emit(event, payload, (response: unknown) => {
+      window.clearTimeout(timer);
+
+      if (!response || typeof response !== "object") {
+        resolve({
+          status: "error",
+          message: "Unexpected socket response",
+        });
+        return;
+      }
+
+      resolve(response as SocketAckResponse<TResult>);
+    });
+  });
+}
+
+/**
+ * 在房间模式下同步服务端状态，并将本地动作通过 Socket.IO 转发给服务端。
  */
 export function useRoomSession(roomCode: string | null) {
   const { token } = useAuth();
@@ -41,7 +101,52 @@ export function useRoomSession(roomCode: string | null) {
   const inFlightRef = useRef(false);
   const queuedActionRef = useRef<GameAction | null>(null);
   const activeRoomCodeRef = useRef<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
+  /**
+   * 统一封装房间级请求：自动注入 roomCode、处理错误并同步快照。
+   */
+  const emitRoomRequest = useCallback(
+    async <TResult extends object>(
+      event: string,
+      payload: Record<string, unknown>,
+      fallbackError: string,
+    ) => {
+      if (!roomCode) {
+        throw new Error("房间不存在");
+      }
+
+      const socket = socketRef.current;
+      if (!socket) {
+        throw new Error("连接尚未建立");
+      }
+
+      const response = await emitWithAck<
+        { roomCode: string } & Record<string, unknown>,
+        TResult
+      >(socket, event, {
+        roomCode,
+        ...payload,
+      });
+
+      if (response.status === "error") {
+        throw new Error(normalizeAckError(response, fallbackError));
+      }
+
+      const maybeRoom = (response as { room?: unknown }).room;
+      if (isRoomSnapshot(maybeRoom)) {
+        setRoomSnapshot(maybeRoom);
+      }
+
+      setConnectionError("");
+      return response;
+    },
+    [roomCode, setRoomSnapshot],
+  );
+
+  /**
+   * 按顺序发送对局动作，避免并发提交导致状态错乱。
+   */
   const flushAction = useCallback(
     async (action: GameAction) => {
       if (!roomCode) {
@@ -57,11 +162,18 @@ export function useRoomSession(roomCode: string | null) {
         return;
       }
 
+      const socket = socketRef.current;
+      if (!socket) {
+        queuedActionRef.current = action;
+        setConnectionError("连接尚未建立，动作已排队");
+        return;
+      }
+
       inFlightRef.current = true;
       try {
-        const response = await postRoomActionApi(roomCode, action);
-        setRoomSnapshot(response.room);
-        setConnectionError("");
+        await emitRoomRequest<{ room: RoomSnapshot }>("room.action", {
+          action,
+        }, "Action request failed");
       } catch (error) {
         const message = error instanceof Error ? error.message : "Action request failed";
         setConnectionError(message);
@@ -74,12 +186,45 @@ export function useRoomSession(roomCode: string | null) {
         }
       }
     },
-    [roomCode, setRoomSnapshot],
+    [roomCode, emitRoomRequest],
   );
+
+  /**
+   * 发送“准备/取消准备”请求。
+   */
+  const sendReady = useCallback(
+    async (ready: boolean) => {
+      await emitRoomRequest<{ room: RoomSnapshot }>(
+        "room.ready",
+        { ready },
+        "设置准备状态失败",
+      );
+    },
+    [emitRoomRequest],
+  );
+
+  /**
+   * 发送“开始对局”请求。
+   */
+  const sendStart = useCallback(async () => {
+    await emitRoomRequest<{ room: RoomSnapshot }>("room.start", {}, "开局失败");
+  }, [emitRoomRequest]);
+
+  /**
+   * 发送“离开房间”请求。
+   */
+  const sendLeave = useCallback(async () => {
+    await emitRoomRequest<Record<string, never>>("room.leave", {}, "离开房间失败");
+  }, [emitRoomRequest]);
 
   useEffect(() => {
     if (!roomCode || !token) {
       setRemoteDispatch(null);
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      inFlightRef.current = false;
+      queuedActionRef.current = null;
+
       if (activeRoomCodeRef.current && !roomCode) {
         clearRoomSession();
       }
@@ -89,6 +234,8 @@ export function useRoomSession(roomCode: string | null) {
 
     activeRoomCodeRef.current = roomCode;
     let disposed = false;
+    inFlightRef.current = false;
+    queuedActionRef.current = null;
     setIsConnecting(true);
     setConnectionError("");
 
@@ -96,45 +243,104 @@ export function useRoomSession(roomCode: string | null) {
       void flushAction(action);
     });
 
-    getRoomApi(roomCode)
-      .then((response) => {
-        if (disposed) {
-          return;
-        }
-        setRoomSnapshot(response.room);
-        setConnectionError("");
-      })
-      .catch((error) => {
-        if (disposed) {
-          return;
-        }
-        const message = error instanceof Error ? error.message : "Failed to load room";
-        setConnectionError(message);
-      })
-      .finally(() => {
-        if (!disposed) {
-          setIsConnecting(false);
-        }
-      });
+    const socket = io(API_BASE_URL, {
+      auth: {
+        token,
+      },
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
 
-    const eventSource = new EventSource(getRoomEventsUrl(roomCode, token));
+    socketRef.current = socket;
 
-    const handleRoomUpdate = (event: MessageEvent<string>) => {
+    /**
+     * 尝试发送排队中的最后一个动作。
+     */
+    const flushQueued = () => {
+      const queued = queuedActionRef.current;
+      if (!queued) {
+        return;
+      }
+
+      queuedActionRef.current = null;
+      void flushAction(queued);
+    };
+
+    /**
+     * 处理房间快照推送并刷新本地状态。
+     */
+    const handleRoomUpdate = (payload: unknown) => {
       if (disposed) {
         return;
       }
 
-      try {
-        const room = parseRoomUpdate(event.data);
-        if (room) {
-          setRoomSnapshot(room);
-        }
-      } catch {
-        // ignore malformed message
+      const room = parseRoomUpdate(payload);
+      if (room) {
+        setRoomSnapshot(room);
+        setIsConnecting(false);
+        setConnectionError("");
+        flushQueued();
       }
     };
 
-    const handleSourceError = () => {
+    /**
+     * Socket 连接成功后执行房间订阅。
+     */
+    const handleSocketConnect = () => {
+      if (disposed) {
+        return;
+      }
+
+      setConnectionError("");
+      void emitWithAck<{ roomCode: string }, Record<string, never>>(
+        socket,
+        "room.subscribe",
+        {
+          roomCode,
+        },
+      )
+        .then((response) => {
+          if (disposed) {
+            return;
+          }
+
+          if (response.status === "error") {
+            setIsConnecting(false);
+            setConnectionError(normalizeAckError(response, "订阅房间失败"));
+            return;
+          }
+
+          flushQueued();
+        })
+        .catch((error) => {
+          if (disposed) {
+            return;
+          }
+
+          const message = error instanceof Error ? error.message : "订阅房间失败";
+          setIsConnecting(false);
+          setConnectionError(message);
+        });
+    };
+
+    /**
+     * 处理连接建立失败错误。
+     */
+    const handleConnectError = (error: Error) => {
+      if (disposed) {
+        return;
+      }
+
+      setIsConnecting(false);
+      setConnectionError(error.message || "连接失败，请重试");
+    };
+
+    /**
+     * 处理连接断开提示，等待自动重连。
+     */
+    const handleDisconnect = () => {
       if (disposed) {
         return;
       }
@@ -142,7 +348,10 @@ export function useRoomSession(roomCode: string | null) {
       setConnectionError("连接中断，正在自动重连...");
     };
 
-    const handleConnected = () => {
+    /**
+     * 处理服务端房间连接确认事件。
+     */
+    const handleRoomConnected = () => {
       if (disposed) {
         return;
       }
@@ -150,39 +359,36 @@ export function useRoomSession(roomCode: string | null) {
       setConnectionError("");
     };
 
-    eventSource.onopen = handleConnected;
-    eventSource.onmessage = handleRoomUpdate;
-    eventSource.addEventListener("room.update", handleRoomUpdate as EventListener);
-    eventSource.addEventListener("room.connected", handleConnected as EventListener);
-    eventSource.addEventListener("error", handleSourceError as EventListener);
+    socket.on("connect", handleSocketConnect);
+    socket.on("room.update", handleRoomUpdate);
+    socket.on("room.connected", handleRoomConnected);
+    socket.on("connect_error", handleConnectError);
+    socket.on("disconnect", handleDisconnect);
 
     return () => {
       disposed = true;
       setRemoteDispatch(null);
-      eventSource.removeEventListener(
-        "room.update",
-        handleRoomUpdate as EventListener,
-      );
-      eventSource.removeEventListener(
-        "room.connected",
-        handleConnected as EventListener,
-      );
-      eventSource.removeEventListener("error", handleSourceError as EventListener);
-      eventSource.onopen = null;
-      eventSource.onmessage = null;
-      eventSource.close();
+      inFlightRef.current = false;
+      queuedActionRef.current = null;
+
+      socket.off("connect", handleSocketConnect);
+      socket.off("room.update", handleRoomUpdate);
+      socket.off("room.connected", handleRoomConnected);
+      socket.off("connect_error", handleConnectError);
+      socket.off("disconnect", handleDisconnect);
+
+      socket.disconnect();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
     };
-  }, [
-    roomCode,
-    token,
-    clearRoomSession,
-    setRemoteDispatch,
-    setRoomSnapshot,
-    flushAction,
-  ]);
+  }, [roomCode, token, clearRoomSession, setRemoteDispatch, setRoomSnapshot, flushAction]);
 
   return {
     isConnecting,
     connectionError,
+    sendReady,
+    sendStart,
+    sendLeave,
   };
 }

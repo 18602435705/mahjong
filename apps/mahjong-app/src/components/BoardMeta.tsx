@@ -1,14 +1,13 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
 import { useNavigate } from "react-router-dom";
-import { leaveRoomApi } from "../api/rooms";
 import { selectStatusText } from "../store/gameSelectors";
 import { useGameStore } from "../store/gameStore";
 
 /**
  * 渲染顶部元信息区域：菜单、局数与状态文案。
  */
-function BoardMeta() {
+function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
   const navigate = useNavigate();
   const round = useGameStore((store) => store.game.round);
   const roomCode = useGameStore((store) => store.roomCode);
@@ -26,7 +25,7 @@ function BoardMeta() {
   async function handleBackLobby() {
     if (roomCode) {
       try {
-        await leaveRoomApi(roomCode);
+        await leaveRoom();
       } catch {
         // noop
       } finally {

@@ -3,7 +3,6 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import BoardMeta from "../components/BoardMeta";
 import DiscardPool from "../components/DiscardPool";
 import PlayerSeat from "../components/PlayerSeat";
-import { leaveRoomApi, setReadyApi, startRoomApi } from "../api/rooms";
 import { useActionVoice } from "../hooks/useActionVoice";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useGameStore } from "../store/gameStore";
@@ -23,11 +22,22 @@ const GameEffects = memo(function GameEffects() {
   return null;
 });
 
-function RoomLobbyPanel({ roomCode }: { roomCode: string }) {
+type RoomLobbyPanelProps = {
+  roomCode: string;
+  sendReady: (ready: boolean) => Promise<void>;
+  sendStart: () => Promise<void>;
+  sendLeave: () => Promise<void>;
+};
+
+function RoomLobbyPanel({
+  roomCode,
+  sendReady,
+  sendStart,
+  sendLeave,
+}: RoomLobbyPanelProps) {
   const navigate = useNavigate();
   const roomSeats = useGameStore((store) => store.roomSeats);
   const roomCanStart = useGameStore((store) => store.roomCanStart);
-  const setRoomSnapshot = useGameStore((store) => store.setRoomSnapshot);
   const [isBusy, setIsBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -42,8 +52,7 @@ function RoomLobbyPanel({ roomCode }: { roomCode: string }) {
     setFeedback(isSelfReady ? "取消准备中..." : "准备中...");
 
     try {
-      const response = await setReadyApi(roomCode, !isSelfReady);
-      setRoomSnapshot(response.room);
+      await sendReady(!isSelfReady);
       setFeedback(isSelfReady ? "已取消准备" : "已准备，等待其他玩家");
     } catch (error) {
       const message = error instanceof Error ? error.message : "设置准备状态失败";
@@ -58,8 +67,7 @@ function RoomLobbyPanel({ roomCode }: { roomCode: string }) {
     setFeedback("正在开局...");
 
     try {
-      const response = await startRoomApi(roomCode);
-      setRoomSnapshot(response.room);
+      await sendStart();
       setFeedback("对局开始");
     } catch (error) {
       const message = error instanceof Error ? error.message : "开局失败";
@@ -74,7 +82,7 @@ function RoomLobbyPanel({ roomCode }: { roomCode: string }) {
     setFeedback("正在离开房间...");
 
     try {
-      await leaveRoomApi(roomCode);
+      await sendLeave();
       useGameStore.getState().clearRoomSession();
       navigate("/lobby", { replace: true });
     } catch (error) {
@@ -128,7 +136,8 @@ function GamePage() {
   const roomCode = searchParams.get("room")?.trim().toUpperCase() ?? null;
 
   const roomStatus = useGameStore((store) => store.roomStatus);
-  const { isConnecting, connectionError } = useRoomSession(roomCode);
+  const { isConnecting, connectionError, sendReady, sendStart, sendLeave } =
+    useRoomSession(roomCode);
 
   if (!roomCode) {
     return <Navigate to="/lobby" replace />;
@@ -141,7 +150,7 @@ function GamePage() {
   return (
     <div className="mahjong-app">
       <GameEffects />
-      <BoardMeta />
+      <BoardMeta leaveRoom={sendLeave} />
 
       {showLoading ? (
         <section className="room-lobby-panel">
@@ -150,7 +159,14 @@ function GamePage() {
         </section>
       ) : null}
 
-      {showRoomLobby ? <RoomLobbyPanel roomCode={roomCode} /> : null}
+      {showRoomLobby ? (
+        <RoomLobbyPanel
+          roomCode={roomCode}
+          sendReady={sendReady}
+          sendStart={sendStart}
+          sendLeave={sendLeave}
+        />
+      ) : null}
 
       {showTable ? (
         <main className="table-grid">

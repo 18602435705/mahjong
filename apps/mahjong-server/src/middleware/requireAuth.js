@@ -15,6 +15,24 @@ export function extractToken(req) {
   return null;
 }
 
+export function verifyAuthToken(token) {
+  const payload = jwt.verify(token, appConfig.jwtSecret);
+  const userId = Number(payload?.sub);
+  const username = typeof payload?.username === "string" ? payload.username : "";
+
+  if (!Number.isFinite(userId) || !username) {
+    throw new Error("Invalid token payload");
+  }
+
+  return {
+    payload,
+    user: {
+      id: userId,
+      username,
+    },
+  };
+}
+
 export function requireAuth(req, res, next) {
   const token = extractToken(req);
   if (!token) {
@@ -26,22 +44,12 @@ export function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, appConfig.jwtSecret);
-    const userId = Number(payload?.sub);
-    const username = typeof payload?.username === "string" ? payload.username : "";
-
-    if (!Number.isFinite(userId) || !username) {
-      res.status(401).json({
-        status: "error",
-        message: "Invalid token payload",
-      });
-      return;
-    }
+    const { payload, user } = verifyAuthToken(token);
 
     req.auth = {
       ...payload,
-      sub: String(userId),
-      username,
+      sub: String(user.id),
+      username: user.username,
     };
 
     next();

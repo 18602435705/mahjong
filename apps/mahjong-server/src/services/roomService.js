@@ -81,7 +81,7 @@ function requireMembership(room, userId) {
 }
 
 /**
- * 获取房间对应的 SSE 订阅集合，不存在则创建。
+ * 获取房间对应的实时订阅集合，不存在则创建。
  */
 function getOrCreateSubscriberBucket(roomCode) {
   let bucket = roomSubscribers.get(roomCode);
@@ -93,7 +93,7 @@ function getOrCreateSubscriberBucket(roomCode) {
 }
 
 /**
- * 从房间 SSE 订阅集合中移除指定连接。
+ * 从房间实时订阅集合中移除指定连接。
  */
 function removeSubscriber(roomCode, subscription) {
   const bucket = roomSubscribers.get(roomCode);
@@ -108,7 +108,7 @@ function removeSubscriber(roomCode, subscription) {
 }
 
 /**
- * 关闭房间所有 SSE 连接并清理订阅集合。
+ * 关闭房间所有实时订阅并清理集合。
  */
 function closeSubscribers(roomCode) {
   const bucket = roomSubscribers.get(roomCode);
@@ -118,7 +118,7 @@ function closeSubscribers(roomCode) {
 
   for (const subscription of bucket) {
     try {
-      subscription.res.end();
+      subscription.close?.();
     } catch {
       // noop
     }
@@ -128,7 +128,7 @@ function closeSubscribers(roomCode) {
 }
 
 /**
- * 移除指定用户在房间中的全部 SSE 连接。
+ * 移除指定用户在房间中的全部实时订阅。
  */
 function removeUserSubscribers(roomCode, userId) {
   const bucket = roomSubscribers.get(roomCode);
@@ -143,7 +143,7 @@ function removeUserSubscribers(roomCode, userId) {
 
     bucket.delete(subscription);
     try {
-      subscription.res.end();
+      subscription.close?.();
     } catch {
       // noop
     }
@@ -347,14 +347,6 @@ function buildRoomView(room, userId) {
 }
 
 /**
- * 向指定 SSE 连接推送结构化事件。
- */
-function pushSse(res, event, payload) {
-  res.write(`event: ${event}\n`);
-  res.write(`data: ${JSON.stringify(payload)}\n\n`);
-}
-
-/**
  * 向房间内全部在线订阅者广播最新房间快照。
  */
 function publishRoomUpdate(room) {
@@ -366,14 +358,14 @@ function publishRoomUpdate(room) {
   for (const subscription of bucket) {
     try {
       const view = buildRoomView(room, subscription.userId);
-      pushSse(subscription.res, "room.update", {
+      subscription.send("room.update", {
         status: "ok",
         room: view,
       });
     } catch {
       removeSubscriber(room.code, subscription);
       try {
-        subscription.res.end();
+        subscription.close?.();
       } catch {
         // noop
       }
@@ -632,29 +624,30 @@ export function getRoomView(userId, roomCode) {
 }
 
 /**
- * 建立房间 SSE 订阅并推送首帧连接/快照事件，返回清理函数。
+ * 建立房间实时订阅并推送首帧连接/快照事件，返回清理函数。
  */
-export function subscribeRoom(userId, roomCode, res) {
+export function subscribeRoom(userId, roomCode, subscriber) {
   const room = getRoomOrThrow(roomCode);
   requireMembership(room, userId);
 
-  const subscription = { userId, res };
+  const subscription = {
+    userId,
+    send: subscriber.send,
+    close: subscriber.close,
+  };
   getOrCreateSubscriberBucket(room.code).add(subscription);
 
   const cleanup = () => {
     removeSubscriber(room.code, subscription);
   };
 
-  res.on("close", cleanup);
-  res.on("error", cleanup);
-
-  pushSse(res, "room.connected", {
+  subscription.send("room.connected", {
     status: "ok",
     roomCode: room.code,
   });
 
   const currentView = buildRoomView(room, userId);
-  pushSse(res, "room.update", {
+  subscription.send("room.update", {
     status: "ok",
     room: currentView,
   });
