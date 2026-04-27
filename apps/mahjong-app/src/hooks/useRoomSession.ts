@@ -151,6 +151,7 @@ export function useRoomSession(roomCode: string | null) {
     };
 
     eventSource.onopen = handleConnected;
+    eventSource.onmessage = handleRoomUpdate;
     eventSource.addEventListener("room.update", handleRoomUpdate as EventListener);
     eventSource.addEventListener("room.connected", handleConnected as EventListener);
     eventSource.addEventListener("error", handleSourceError as EventListener);
@@ -168,6 +169,7 @@ export function useRoomSession(roomCode: string | null) {
       );
       eventSource.removeEventListener("error", handleSourceError as EventListener);
       eventSource.onopen = null;
+      eventSource.onmessage = null;
       eventSource.close();
     };
   }, [

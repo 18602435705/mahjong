@@ -167,7 +167,7 @@ router.get("/:roomCode/events", (req, res, next) => {
 
     const cleanup = subscribeRoom(user.id, req.params.roomCode, res);
     const heartbeatTimer = setInterval(() => {
-      res.write(": heartbeat\\n\\n");
+      res.write(": heartbeat\n\n");
     }, 15000);
 
     const teardown = () => {
