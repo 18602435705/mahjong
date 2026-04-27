@@ -468,13 +468,13 @@ export function joinRoom(user, roomCode) {
   assertUserCanEnterRoom(user.id, roomCode);
 
   const room = getRoomOrThrow(roomCode);
-  if (room.status !== "lobby") {
-    throw new RoomError(409, "Game has already started");
-  }
-
   const existingSeat = findSeatIndex(room, user.id);
   if (existingSeat >= 0) {
     return buildRoomView(room, user.id);
+  }
+
+  if (room.status !== "lobby") {
+    throw new RoomError(409, "Game has already started");
   }
 
   const availableSeat = room.seats.findIndex((seat) => seat === null);
