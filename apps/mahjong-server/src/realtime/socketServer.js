@@ -2,6 +2,8 @@ import { Server } from "socket.io";
 import { verifyAuthToken } from "../middleware/requireAuth.js";
 import {
   applyGameAction,
+  confirmRematch,
+  endMatch,
   getRoomView,
   leaveRoom,
   RoomError,
@@ -127,6 +129,16 @@ function registerRoomHandlers(socket) {
     }
   });
 
+  socket.on("room.rematch.ready", (payload = {}, ack) => {
+    try {
+      const roomCode = getRoomCode(payload);
+      const room = confirmRematch(user.id, roomCode);
+      ack?.({ status: "ok", room });
+    } catch (error) {
+      ack?.(toErrorResponse(error));
+    }
+  });
+
   socket.on("room.ready", (payload = {}, ack) => {
     try {
       const roomCode = getRoomCode(payload);
@@ -159,6 +171,23 @@ function registerRoomHandlers(socket) {
       }
 
       ack?.({ status: "ok", message: "Left room" });
+    } catch (error) {
+      ack?.(toErrorResponse(error));
+    }
+  });
+
+  socket.on("room.match.end", (payload = {}, ack) => {
+    try {
+      const roomCode = getRoomCode(payload);
+      const result = endMatch(user.id, roomCode);
+
+      const cleanup = subscriptions.get(roomCode);
+      if (cleanup) {
+        cleanup();
+        subscriptions.delete(roomCode);
+      }
+
+      ack?.({ status: "ok", result });
     } catch (error) {
       ack?.(toErrorResponse(error));
     }

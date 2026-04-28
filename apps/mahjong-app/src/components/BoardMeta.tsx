@@ -11,15 +11,12 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
   const navigate = useNavigate();
   const round = useGameStore((store) => store.game.round);
   const roomCode = useGameStore((store) => store.roomCode);
-  const roomStatus = useGameStore((store) => store.roomStatus);
   const statusText = useGameStore((store) => {
     if (store.roomStatus === "lobby") {
       return "房间中：等待全部玩家准备并开局";
     }
     return selectStatusText(store.game);
   });
-  const nextRound = useGameStore((store) => store.nextRound);
-  const resetGame = useGameStore((store) => store.resetGame);
   const clearRoomSession = useGameStore((store) => store.clearRoomSession);
 
   async function handleBackLobby() {
@@ -53,26 +50,6 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
                   onClick={() => void handleBackLobby()}
                 >
                   返回大厅
-                </button>
-              </Popover.Close>
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="menu-item btn-main"
-                  onClick={nextRound}
-                  disabled={roomStatus === "lobby"}
-                >
-                  再来一局
-                </button>
-              </Popover.Close>
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="menu-item btn-sub"
-                  onClick={resetGame}
-                  disabled={roomStatus === "lobby"}
-                >
-                  重置积分
                 </button>
               </Popover.Close>
             </Popover.Content>

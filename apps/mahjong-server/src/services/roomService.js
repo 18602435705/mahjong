@@ -374,9 +374,83 @@ function publishRoomUpdate(room) {
 }
 
 /**
+ * 根据当前房间积分生成结算快照，按分数降序、座位升序计算名次。
+ */
+function buildMatchResult(room) {
+  if (!room.gameState) {
+    throw new RoomError(409, "Game is not active");
+  }
+
+  const players = room.seats
+    .map((seat, seatIndex) => {
+      if (!seat) {
+        return null;
+      }
+
+      return {
+        seatIndex,
+        userId: seat.userId,
+        username: seat.username,
+        score: room.gameState.players[seatIndex]?.score ?? 0,
+      };
+    })
+    .filter(Boolean);
+
+  if (players.length === 0) {
+    throw new RoomError(409, "No players in room");
+  }
+
+  const sortedByRank = [...players].sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+    return left.seatIndex - right.seatIndex;
+  });
+
+  const rankBySeat = new Map(
+    sortedByRank.map((player, index) => [player.seatIndex, index + 1]),
+  );
+
+  return {
+    roomCode: room.code,
+    endedAt: new Date().toISOString(),
+    players: sortedByRank.map((player) => ({
+      ...player,
+      rank: rankBySeat.get(player.seatIndex) ?? sortedByRank.length,
+    })),
+  };
+}
+
+/**
+ * 向房间内全部在线订阅者广播“对局结束”事件。
+ */
+function publishRoomEnded(room, result) {
+  const bucket = roomSubscribers.get(room.code);
+  if (!bucket || bucket.size === 0) {
+    return;
+  }
+
+  for (const subscription of bucket) {
+    try {
+      subscription.send("room.ended", {
+        status: "ok",
+        result,
+      });
+    } catch {
+      removeSubscriber(room.code, subscription);
+      try {
+        subscription.close?.();
+      } catch {
+        // noop
+      }
+    }
+  }
+}
+
+/**
  * 将客户端动作映射为核心引擎动作，并做基础权限校验。
  */
-function mapClientActionToCoreAction(action, actor, ownerUserId, userId) {
+function mapClientActionToCoreAction(action, actor) {
   if (!action || typeof action !== "object") {
     throw new RoomError(400, "Invalid action payload");
   }
@@ -418,16 +492,6 @@ function mapClientActionToCoreAction(action, actor, ownerUserId, userId) {
         type: GAME_ACTION.PLAYER_QIANG_GANG_DECISION,
         actor,
         accept: Boolean(action.accept),
-      };
-
-    case GAME_ACTION.NEXT_ROUND:
-    case GAME_ACTION.RESET_GAME:
-      if (ownerUserId !== userId) {
-        throw new RoomError(403, "Only room owner can manage rounds");
-      }
-      return {
-        type: actionType,
-        presetId: INITIAL_DEAL_PRESET.RANDOM,
       };
 
     default:
@@ -597,8 +661,6 @@ export function applyGameAction(userId, roomCode, action) {
   const coreAction = mapClientActionToCoreAction(
     action,
     seatIndex,
-    room.ownerUserId,
-    userId,
   );
 
   const prevState = room.gameState;
@@ -608,11 +670,96 @@ export function applyGameAction(userId, roomCode, action) {
   }
 
   room.gameState = nextState;
+  if (nextState.phase === PHASE.GAME_OVER) {
+    for (const seat of room.seats) {
+      if (seat) {
+        seat.ready = false;
+      }
+    }
+  }
   room.version += 1;
   touchRoom(room);
   publishRoomUpdate(room);
 
   return buildRoomView(room, userId);
+}
+
+/**
+ * 玩家确认“再来一局”；所有在座玩家确认后自动开始下一局。
+ */
+export function confirmRematch(userId, roomCode) {
+  const room = getRoomOrThrow(roomCode);
+  const seatIndex = requireMembership(room, userId);
+
+  if (room.status !== "playing" || !room.gameState) {
+    throw new RoomError(409, "Game is not active");
+  }
+
+  if (room.gameState.phase !== PHASE.GAME_OVER) {
+    throw new RoomError(409, "Rematch is only available after round settlement");
+  }
+
+  const seat = room.seats[seatIndex];
+  if (!seat) {
+    throw new RoomError(409, "Seat is unavailable");
+  }
+
+  if (!seat.ready) {
+    seat.ready = true;
+  }
+
+  const everyoneConfirmed = room.seats.every((currentSeat) => currentSeat?.ready === true);
+  if (everyoneConfirmed) {
+    const nextState = gameReducer(room.gameState, {
+      type: GAME_ACTION.NEXT_ROUND,
+      presetId: INITIAL_DEAL_PRESET.RANDOM,
+    });
+
+    if (nextState === room.gameState) {
+      throw new RoomError(400, "Cannot start next round from current state");
+    }
+
+    room.gameState = nextState;
+    for (const currentSeat of room.seats) {
+      if (currentSeat) {
+        currentSeat.ready = false;
+      }
+    }
+  }
+
+  room.version += 1;
+  touchRoom(room);
+  publishRoomUpdate(room);
+
+  return buildRoomView(room, userId);
+}
+
+/**
+ * 房主结束整场对局并解散房间，向所有在线成员推送结算结果。
+ */
+export function endMatch(userId, roomCode) {
+  const room = getRoomOrThrow(roomCode);
+  requireMembership(room, userId);
+
+  if (room.ownerUserId !== userId) {
+    throw new RoomError(403, "Only room owner can end the match");
+  }
+
+  if (room.status !== "playing" || !room.gameState) {
+    throw new RoomError(409, "Game is not active");
+  }
+
+  if (room.gameState.phase !== PHASE.GAME_OVER) {
+    throw new RoomError(409, "Match can only end after round settlement");
+  }
+
+  const result = buildMatchResult(room);
+  publishRoomEnded(room, result);
+
+  rooms.delete(room.code);
+  closeSubscribers(room.code);
+
+  return result;
 }
 
 /**

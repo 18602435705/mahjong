@@ -5,6 +5,7 @@ import { GAME_ACTION, type GameAction } from "../mahjongEngine";
 import { useGameStore } from "../store/gameStore";
 import { useAuth } from "../auth/useAuth";
 import type { RoomSnapshot } from "../types/room";
+import type { MatchResultSnapshot } from "../types/result";
 
 interface SocketErrorResponse {
   status: "error";
@@ -46,6 +47,61 @@ function parseRoomUpdate(payload: unknown): RoomSnapshot | null {
   };
 
   return isRoomSnapshot(envelope.room) ? envelope.room : null;
+}
+
+/**
+ * 判断任意值是否满足对局结算快照的最小结构要求。
+ */
+function isMatchResultSnapshot(value: unknown): value is MatchResultSnapshot {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<MatchResultSnapshot>;
+  if (typeof candidate.roomCode !== "string" || typeof candidate.endedAt !== "string") {
+    return false;
+  }
+
+  if (!Array.isArray(candidate.players)) {
+    return false;
+  }
+
+  return candidate.players.every((row) => {
+    if (!row || typeof row !== "object") {
+      return false;
+    }
+
+    const player = row as {
+      seatIndex?: unknown;
+      userId?: unknown;
+      username?: unknown;
+      score?: unknown;
+      rank?: unknown;
+    };
+
+    return (
+      typeof player.seatIndex === "number" &&
+      typeof player.userId === "number" &&
+      typeof player.username === "string" &&
+      typeof player.score === "number" &&
+      typeof player.rank === "number"
+    );
+  });
+}
+
+/**
+ * 从服务端结束事件中提取结算快照；结构不合法时返回 null。
+ */
+function parseRoomEnded(payload: unknown): MatchResultSnapshot | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const envelope = payload as {
+    result?: unknown;
+  };
+
+  return isMatchResultSnapshot(envelope.result) ? envelope.result : null;
 }
 
 /**
@@ -98,6 +154,7 @@ export function useRoomSession(roomCode: string | null) {
   const setRemoteDispatch = useGameStore((store) => store.setRemoteDispatch);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string>("");
+  const [matchResult, setMatchResult] = useState<MatchResultSnapshot | null>(null);
   const inFlightRef = useRef(false);
   const queuedActionRef = useRef<GameAction | null>(null);
   const activeRoomCodeRef = useRef<string | null>(null);
@@ -217,9 +274,36 @@ export function useRoomSession(roomCode: string | null) {
     await emitRoomRequest<Record<string, never>>("room.leave", {}, "离开房间失败");
   }, [emitRoomRequest]);
 
+  /**
+   * 发送“再来一局”确认请求，确认后不可撤回。
+   */
+  const sendRematchReady = useCallback(async () => {
+    await emitRoomRequest<{ room: RoomSnapshot }>(
+      "room.rematch.ready",
+      {},
+      "确认再来一局失败",
+    );
+  }, [emitRoomRequest]);
+
+  /**
+   * 房主结束整场对局并触发结算广播。
+   */
+  const sendEndMatch = useCallback(async () => {
+    const response = await emitRoomRequest<{ result?: MatchResultSnapshot }>(
+      "room.match.end",
+      {},
+      "结束对局失败",
+    );
+
+    if (isMatchResultSnapshot(response.result)) {
+      setMatchResult(response.result);
+    }
+  }, [emitRoomRequest]);
+
   useEffect(() => {
     if (!roomCode || !token) {
       setRemoteDispatch(null);
+      setMatchResult(null);
       socketRef.current?.disconnect();
       socketRef.current = null;
       inFlightRef.current = false;
@@ -238,6 +322,7 @@ export function useRoomSession(roomCode: string | null) {
     queuedActionRef.current = null;
     setIsConnecting(true);
     setConnectionError("");
+    setMatchResult(null);
 
     setRemoteDispatch((action) => {
       void flushAction(action);
@@ -359,9 +444,25 @@ export function useRoomSession(roomCode: string | null) {
       setConnectionError("");
     };
 
+    /**
+     * 处理房主结束对局广播，记录结算数据供页面跳转。
+     */
+    const handleRoomEnded = (payload: unknown) => {
+      if (disposed) {
+        return;
+      }
+
+      const result = parseRoomEnded(payload);
+      if (result) {
+        setConnectionError("");
+        setMatchResult(result);
+      }
+    };
+
     socket.on("connect", handleSocketConnect);
     socket.on("room.update", handleRoomUpdate);
     socket.on("room.connected", handleRoomConnected);
+    socket.on("room.ended", handleRoomEnded);
     socket.on("connect_error", handleConnectError);
     socket.on("disconnect", handleDisconnect);
 
@@ -374,6 +475,7 @@ export function useRoomSession(roomCode: string | null) {
       socket.off("connect", handleSocketConnect);
       socket.off("room.update", handleRoomUpdate);
       socket.off("room.connected", handleRoomConnected);
+      socket.off("room.ended", handleRoomEnded);
       socket.off("connect_error", handleConnectError);
       socket.off("disconnect", handleDisconnect);
 
@@ -390,5 +492,8 @@ export function useRoomSession(roomCode: string | null) {
     sendReady,
     sendStart,
     sendLeave,
+    sendRematchReady,
+    sendEndMatch,
+    matchResult,
   };
 }

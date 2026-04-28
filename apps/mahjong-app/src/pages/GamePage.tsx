@@ -1,11 +1,14 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import BoardMeta from "../components/BoardMeta";
 import DiscardPool from "../components/DiscardPool";
 import PlayerSeat from "../components/PlayerSeat";
+import { PHASE } from "../mahjongEngine";
 import { useActionVoice } from "../hooks/useActionVoice";
 import { useRoomSession } from "../hooks/useRoomSession";
+import { persistMatchResult } from "../result/resultStorage";
 import { useGameStore } from "../store/gameStore";
+import type { RoomSeatView } from "../types/room";
 import "../App.css";
 
 const AI_SEATS = [
@@ -128,16 +131,167 @@ function RoomLobbyPanel({
   );
 }
 
+type RoundSettlementModalProps = {
+  roomCode: string;
+  seats: RoomSeatView[];
+  isOwner: boolean;
+  sendRematchReady: () => Promise<void>;
+  sendEndMatch: () => Promise<void>;
+};
+
+function RoundSettlementModal({
+  roomCode,
+  seats,
+  isOwner,
+  sendRematchReady,
+  sendEndMatch,
+}: RoundSettlementModalProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isEndingMatch, setIsEndingMatch] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  const selfSeat = useMemo(
+    () => seats.find((seat) => seat.isSelf),
+    [seats],
+  );
+  const isSelfConfirmed = selfSeat?.ready ?? false;
+
+  const occupiedSeats = useMemo(
+    () => seats.filter((seat) => seat.userId !== null),
+    [seats],
+  );
+  const confirmedCount = useMemo(
+    () => occupiedSeats.filter((seat) => seat.ready).length,
+    [occupiedSeats],
+  );
+
+  async function handleConfirmRematch() {
+    if (isSelfConfirmed || isConfirming || isEndingMatch) {
+      return;
+    }
+
+    setIsConfirming(true);
+    setFeedback("正在确认再来一局...");
+
+    try {
+      await sendRematchReady();
+      setFeedback("你已确认，等待其他玩家...");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "确认再来一局失败";
+      setFeedback(message);
+    } finally {
+      setIsConfirming(false);
+    }
+  }
+
+  async function handleEndMatch() {
+    if (!isOwner || isEndingMatch || isConfirming) {
+      return;
+    }
+
+    const shouldProceed = window.confirm("确认解散房间并进入结算页吗？");
+    if (!shouldProceed) {
+      return;
+    }
+
+    setIsEndingMatch(true);
+    setFeedback("正在结束对局...");
+
+    try {
+      await sendEndMatch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "结束对局失败";
+      setFeedback(message);
+      setIsEndingMatch(false);
+    }
+  }
+
+  return (
+    <section className="round-settlement-overlay" aria-live="polite">
+      <div className="round-settlement-dialog">
+        <h2>本局已结束</h2>
+        <p>{`房间 ${roomCode} · 已确认 ${confirmedCount}/${occupiedSeats.length}`}</p>
+
+        <ul className="round-settlement-list">
+          {occupiedSeats.map((seat) => (
+            <li key={`settle-seat-${seat.index}`}>
+              {`座位 ${seat.index + 1} · ${seat.username ?? "未知玩家"}`}
+              {seat.isSelf ? "（你）" : ""}
+              {seat.ready ? " · 已确认" : " · 待确认"}
+            </li>
+          ))}
+        </ul>
+
+        <div className="round-settlement-actions">
+          <button
+            type="button"
+            disabled={isSelfConfirmed || isConfirming || isEndingMatch}
+            onClick={() => void handleConfirmRematch()}
+          >
+            {isSelfConfirmed ? "已确认再来一局" : "再来一局"}
+          </button>
+          {isOwner ? (
+            <button
+              type="button"
+              disabled={isEndingMatch || isConfirming}
+              onClick={() => void handleEndMatch()}
+            >
+              结束对局
+            </button>
+          ) : null}
+        </div>
+
+        {feedback ? <p>{feedback}</p> : null}
+      </div>
+    </section>
+  );
+}
+
 /**
  * 麻将对局主界面容器，房间模式唯一入口。
  */
 function GamePage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roomCode = searchParams.get("room")?.trim().toUpperCase() ?? null;
 
   const roomStatus = useGameStore((store) => store.roomStatus);
-  const { isConnecting, connectionError, sendReady, sendStart, sendLeave } =
-    useRoomSession(roomCode);
+  const roomOwnerUserId = useGameStore((store) => store.roomOwnerUserId);
+  const roomSeats = useGameStore((store) => store.roomSeats);
+  const game = useGameStore((store) => store.game);
+  const {
+    isConnecting,
+    connectionError,
+    sendReady,
+    sendStart,
+    sendLeave,
+    sendRematchReady,
+    sendEndMatch,
+    matchResult,
+  } = useRoomSession(roomCode);
+
+  const selfSeat = useMemo(
+    () => roomSeats.find((seat) => seat.isSelf),
+    [roomSeats],
+  );
+  const isRoomOwner = Boolean(
+    selfSeat?.userId !== null && selfSeat?.userId === roomOwnerUserId,
+  );
+
+  useEffect(() => {
+    if (!matchResult) {
+      return;
+    }
+
+    persistMatchResult(matchResult);
+    useGameStore.getState().clearRoomSession();
+    navigate("/result", {
+      replace: true,
+      state: {
+        result: matchResult,
+      },
+    });
+  }, [matchResult, navigate]);
 
   if (!roomCode) {
     return <Navigate to="/lobby" replace />;
@@ -146,6 +300,8 @@ function GamePage() {
   const showLoading = roomStatus === null && isConnecting;
   const showRoomLobby = roomStatus === "lobby";
   const showTable = roomStatus === "playing";
+  const showRoundSettlementModal =
+    showTable && game.phase === PHASE.GAME_OVER;
 
   return (
     <div className="mahjong-app">
@@ -183,6 +339,16 @@ function GamePage() {
           </section>
           <PlayerSeat playerIndex={0} showHand seatClass="seat-bottom" />
         </main>
+      ) : null}
+
+      {showRoundSettlementModal ? (
+        <RoundSettlementModal
+          roomCode={roomCode}
+          seats={roomSeats}
+          isOwner={isRoomOwner}
+          sendRematchReady={sendRematchReady}
+          sendEndMatch={sendEndMatch}
+        />
       ) : null}
 
       {!showLoading && roomStatus === null ? (
