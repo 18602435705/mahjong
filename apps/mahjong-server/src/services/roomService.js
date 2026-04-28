@@ -11,6 +11,7 @@ const ROOM_CODE_DIGITS = "0123456789";
 const ROOM_CODE_LENGTH = 6;
 const ROOM_MAX_PLAYERS = 4;
 const createRoomCodeToken = customAlphabet(ROOM_CODE_DIGITS, ROOM_CODE_LENGTH);
+const VALID_PRESET_IDS = new Set(Object.values(INITIAL_DEAL_PRESET));
 
 const rooms = new Map();
 const roomSubscribers = new Map();
@@ -31,6 +32,33 @@ export class RoomError extends Error {
  */
 function touchRoom(room) {
   room.updatedAt = new Date().toISOString();
+}
+
+/**
+ * 解析并校验房间预设 ID，未传时默认使用随机发牌。
+ */
+function normalizePresetId(presetId) {
+  if (presetId === undefined || presetId === null || presetId === "") {
+    return INITIAL_DEAL_PRESET.RANDOM;
+  }
+
+  if (typeof presetId !== "string" || !VALID_PRESET_IDS.has(presetId)) {
+    throw new RoomError(400, "Invalid presetId");
+  }
+
+  return presetId;
+}
+
+/**
+ * 读取房间绑定的预设 ID；异常值回退为随机发牌。
+ */
+function resolveRoomPresetId(room) {
+  const candidate = room.presetId;
+  if (typeof candidate !== "string" || !VALID_PRESET_IDS.has(candidate)) {
+    return INITIAL_DEAL_PRESET.RANDOM;
+  }
+
+  return candidate;
 }
 
 /**
@@ -500,10 +528,11 @@ function mapClientActionToCoreAction(action, actor) {
 }
 
 /**
- * 创建新房间并让发起人占据 0 号位。
+ * 创建新房间并让发起人占据 0 号位，可选绑定固定发牌预设。
  */
-export function createRoom(user) {
+export function createRoom(user, presetId) {
   assertUserCanEnterRoom(user.id);
+  const normalizedPresetId = normalizePresetId(presetId);
 
   const roomCode = generateRoomCode();
   const room = {
@@ -512,6 +541,7 @@ export function createRoom(user) {
     ownerUserId: user.id,
     seats: [createSeat(user), null, null, null],
     gameState: null,
+    presetId: normalizedPresetId,
     version: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -630,7 +660,7 @@ export function startGame(userId, roomCode) {
     throw new RoomError(409, "All players must be ready");
   }
 
-  const state = createInitialGameState(INITIAL_DEAL_PRESET.RANDOM);
+  const state = createInitialGameState(resolveRoomPresetId(room));
 
   room.seats.forEach((seat, index) => {
     state.players[index].name = seat.username;
@@ -712,7 +742,7 @@ export function confirmRematch(userId, roomCode) {
   if (everyoneConfirmed) {
     const nextState = gameReducer(room.gameState, {
       type: GAME_ACTION.NEXT_ROUND,
-      presetId: INITIAL_DEAL_PRESET.RANDOM,
+      presetId: resolveRoomPresetId(room),
     });
 
     if (nextState === room.gameState) {

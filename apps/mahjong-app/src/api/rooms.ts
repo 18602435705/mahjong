@@ -1,4 +1,5 @@
 import { request } from "./client";
+import type { InitialDealPresetId } from "../mahjongEngine";
 import type { RoomSnapshot } from "../types/room";
 
 interface RoomResponse {
@@ -6,10 +7,15 @@ interface RoomResponse {
   room: RoomSnapshot;
 }
 
-export function createRoomApi() {
+export function createRoomApi(presetId?: InitialDealPresetId) {
   return request<RoomResponse>({
     url: "/api/rooms/create",
     method: "POST",
+    data: presetId
+      ? {
+          presetId,
+        }
+      : undefined,
   });
 }
 

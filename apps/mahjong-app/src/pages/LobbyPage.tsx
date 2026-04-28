@@ -1,14 +1,22 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { activateVoicePlayback } from "../actionAudio";
 import { joinRoomApi, createRoomApi } from "../api/rooms";
 import { useAuth } from "../auth/useAuth";
+import {
+  INITIAL_DEAL_PRESET,
+  INITIAL_DEAL_PRESET_OPTIONS,
+  type InitialDealPresetId,
+} from "../mahjongEngine";
 import "./LobbyPage.css";
 
 export default function LobbyPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [joinCode, setJoinCode] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState<InitialDealPresetId>(
+    INITIAL_DEAL_PRESET.RANDOM,
+  );
   const [isBusy, setIsBusy] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
 
@@ -19,7 +27,7 @@ export default function LobbyPage() {
     setFeedback("正在创建房间...");
 
     try {
-      const response = await createRoomApi();
+      const response = await createRoomApi(selectedPresetId);
       const roomCode = response.room.code;
       activateVoicePlayback();
       setFeedback(`房间 ${roomCode} 创建成功，正在进入...`);
@@ -55,6 +63,11 @@ export default function LobbyPage() {
     }
   }
 
+  function handlePresetChange(event: ChangeEvent<HTMLSelectElement>) {
+    const presetId = event.target.value as InitialDealPresetId;
+    setSelectedPresetId(presetId);
+  }
+
   function handleLogout() {
     signOut();
     navigate("/auth", { replace: true });
@@ -79,6 +92,21 @@ export default function LobbyPage() {
             <h2>快速操作</h2>
             <span>联机模式</span>
           </div>
+
+          <label className="preset-field">
+            <span>选择预设（默认随机发牌）</span>
+            <select
+              value={selectedPresetId}
+              disabled={isBusy}
+              onChange={handlePresetChange}
+            >
+              {INITIAL_DEAL_PRESET_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <button
             className="primary-action"

@@ -25,7 +25,7 @@ function handleRouteError(error, res) {
 router.post("/create", (req, res, next) => {
   try {
     const user = getAuthUser(req);
-    const room = createRoom(user);
+    const room = createRoom(user, req.body?.presetId);
 
     res.status(201).json({
       status: "ok",
