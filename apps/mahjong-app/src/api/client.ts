@@ -3,7 +3,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { getStoredToken } from "../auth/storage";
+import { clearStoredSession, getStoredToken } from "../auth/storage";
 
 interface ApiErrorResponse {
   message?: string;
@@ -62,6 +62,19 @@ function withDefaultHeaders(config: InternalAxiosRequestConfig) {
   return config;
 }
 
+function handleUnauthorized() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  clearStoredSession();
+
+  if (window.location.pathname !== "/auth") {
+    window.alert("登录已失效，即将跳转到登录页");
+    window.location.replace("/auth");
+  }
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -71,7 +84,20 @@ apiClient.interceptors.request.use(withDefaultHeaders);
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(new Error(toErrorMessage(error))),
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const hasToken = Boolean(getStoredToken());
+      const hasAuthHeader = AxiosHeaders.from(error.config?.headers).has(
+        "Authorization",
+      );
+
+      if (hasToken || hasAuthHeader) {
+        handleUnauthorized();
+      }
+    }
+
+    return Promise.reject(new Error(toErrorMessage(error)));
+  },
 );
 
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
