@@ -355,6 +355,17 @@ function GamePage() {
         <section className="room-lobby-panel">
           <h2>进入房间失败</h2>
           <p>{connectionError || "请返回大厅后重试"}</p>
+          <div className="room-lobby-actions">
+            <button
+              type="button"
+              onClick={() => {
+                useGameStore.getState().clearRoomSession();
+                navigate("/lobby", { replace: true });
+              }}
+            >
+              返回大厅
+            </button>
+          </div>
         </section>
       ) : null}
 
