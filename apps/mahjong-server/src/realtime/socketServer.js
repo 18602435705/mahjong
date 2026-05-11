@@ -12,6 +12,9 @@ import {
   subscribeRoom,
 } from "../services/roomService.js";
 
+const AUTH_MISSING_MESSAGE = "Missing authorization token";
+const AUTH_INVALID_MESSAGE = "Invalid or expired token";
+
 function toErrorResponse(error) {
   if (error instanceof RoomError) {
     return {
@@ -209,7 +212,7 @@ export function attachSocketServer(httpServer) {
   io.use((socket, next) => {
     const token = getHandshakeToken(socket);
     if (!token) {
-      next(new Error("Missing authorization token"));
+      next(new Error(AUTH_MISSING_MESSAGE));
       return;
     }
 
@@ -218,7 +221,7 @@ export function attachSocketServer(httpServer) {
       socket.data.user = user;
       next();
     } catch {
-      next(new Error("Invalid or expired token"));
+      next(new Error(AUTH_INVALID_MESSAGE));
     }
   });
 

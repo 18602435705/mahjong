@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "../api/client";
+import { clearStoredSession } from "../auth/storage";
 import { GAME_ACTION, type GameAction } from "../mahjongEngine";
 import { useGameStore } from "../store/gameStore";
 import { useAuth } from "../auth/useAuth";
@@ -16,6 +17,9 @@ interface SocketErrorResponse {
 type SocketAckResponse<T extends object = Record<string, never>> =
   | ({ status: "ok" } & T)
   | SocketErrorResponse;
+
+const AUTH_MISSING_MESSAGE = "Missing authorization token";
+const AUTH_INVALID_MESSAGE = "Invalid or expired token";
 
 /**
  * 判断任意值是否满足房间快照的最小结构要求。
@@ -142,6 +146,22 @@ function emitWithAck<TPayload extends object, TResult extends object>(
       resolve(response as SocketAckResponse<TResult>);
     });
   });
+}
+
+function isSocketAuthError(message: string): boolean {
+  return message === AUTH_MISSING_MESSAGE || message === AUTH_INVALID_MESSAGE;
+}
+
+function redirectToAuthBySocket(message: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  clearStoredSession();
+  window.alert(message || "登录已失效，即将跳转到登录页");
+  if (window.location.pathname !== "/auth") {
+    window.location.replace("/auth");
+  }
 }
 
 /**
@@ -415,6 +435,11 @@ export function useRoomSession(roomCode: string | null) {
      */
     const handleConnectError = (error: Error) => {
       if (disposed) {
+        return;
+      }
+
+      if (isSocketAuthError(error.message)) {
+        redirectToAuthBySocket("登录已失效，即将跳转到登录页");
         return;
       }
 
