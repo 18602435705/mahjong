@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
+    "dev": "node --env-file-if-exists=.env --watch src/index.js",
+    "start": "node --env-file-if-exists=.env src/index.js",
     "build": "echo \"No build step for mahjong-server\"",
     "lint": "echo \"No lint step for mahjong-server\"",
     "test": "echo \"No tests yet for mahjong-server\""

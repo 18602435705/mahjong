@@ -10,13 +10,19 @@ Monorepo 中的 Express 子应用，提供最小可运行 HTTP 服务。
 pnpm install
 ```
 
-2. 启动开发模式（自动重启）：
+2. 在 `apps/mahjong-server` 目录创建 `.env`（可从示例复制）：
+
+```bash
+cp apps/mahjong-server/.env.example apps/mahjong-server/.env
+```
+
+3. 启动开发模式（自动重启）：
 
 ```bash
 pnpm --filter mahjong-server dev
 ```
 
-3. 生产模式启动：
+4. 生产模式启动：
 
 ```bash
 pnpm --filter mahjong-server start
@@ -69,3 +75,19 @@ pnpm --filter mahjong-server start
 
 - `JWT_SECRET`（默认 `replace-with-strong-secret`）
 - `JWT_EXPIRES_IN`（默认 `7d`）
+
+## 火山 TTS 配置
+
+语音播报代理服务会读取以下环境变量：
+
+- `VOLC_TTS_API_KEY`（必填）
+- `VOLC_TTS_RESOURCE_ID`（默认 `seed-tts-2.0`）
+- `VOLC_TTS_SPEAKER`（默认 `zh_female_xiaohe_uranus_bigtts`）
+- `VOLC_TTS_FORMAT`（默认 `mp3`）
+- `VOLC_TTS_SAMPLE_RATE`（默认 `24000`）
+- `TTS_SESSION_TTL_MS`（默认 `60000`）
+- `TTS_CACHE_MAX_ITEMS`（默认 `500`）
+- `TTS_CACHE_TTL_MS`（默认 `86400000`）
+- `TTS_CACHE_DIR`（默认 `/private/tmp/mahjong-tts-cache`）
+
+说明：`/api/tts/stream/:token` 会返回 `Cache-Control: private, max-age=<TTS_CACHE_TTL_MS/1000>`，允许浏览器进行私有缓存。

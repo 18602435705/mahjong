@@ -1,6 +1,8 @@
 import "./BoardMeta.css";
 import * as Popover from "@radix-ui/react-popover";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isVoiceEnabled, setVoiceEnabled } from "../actionAudio";
 import { selectStatusText } from "../store/gameSelectors";
 import { useGameStore } from "../store/gameStore";
 
@@ -9,6 +11,7 @@ import { useGameStore } from "../store/gameStore";
  */
 function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
   const navigate = useNavigate();
+  const [voiceEnabled, setVoiceEnabledState] = useState(() => isVoiceEnabled());
   const round = useGameStore((store) => store.game.round);
   const roomCode = useGameStore((store) => store.roomCode);
   const statusText = useGameStore((store) => {
@@ -32,6 +35,12 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
     navigate("/lobby");
   }
 
+  function handleToggleVoice() {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    setVoiceEnabledState(next);
+  }
+
   return (
     <section className="board-meta">
       <div className="fab-menu">
@@ -42,7 +51,11 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
             </button>
           </Popover.Trigger>
           <Popover.Portal>
-            <Popover.Content className="menu-panel" sideOffset={8} align="start">
+            <Popover.Content
+              className="menu-panel"
+              sideOffset={8}
+              align="start"
+            >
               <Popover.Close asChild>
                 <button
                   type="button"
@@ -52,6 +65,13 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
                   返回大厅
                 </button>
               </Popover.Close>
+              <button
+                type="button"
+                className="menu-item btn-sub"
+                onClick={handleToggleVoice}
+              >
+                {voiceEnabled ? "声音：开" : "声音：关"}
+              </button>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>

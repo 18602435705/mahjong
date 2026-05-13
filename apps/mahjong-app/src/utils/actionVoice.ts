@@ -3,6 +3,7 @@ import {
   MELD_TYPE,
   SUIT,
   WIN_METHOD,
+  huSummaryText,
   type GameState,
   type Meld,
   type Tile,
@@ -25,7 +26,10 @@ function tileToVoiceText(tile: Tile) {
 /**
  * 比较前后状态的副露列表，找出本次状态更新中新出现或发生变化的副露。
  */
-function detectMeldChange(prevState: GameState, nextState: GameState): Meld | null {
+function detectMeldChange(
+  prevState: GameState,
+  nextState: GameState,
+): Meld | null {
   for (let index = 0; index < nextState.players.length; index += 1) {
     const prevMelds = prevState.players[index].melds;
     const nextMelds = nextState.players[index].melds;
@@ -50,7 +54,10 @@ function detectMeldChange(prevState: GameState, nextState: GameState): Meld | nu
 /**
  * 比较前后状态的弃牌区，识别本次新增的弃牌。
  */
-function detectDiscardedTile(prevState: GameState, nextState: GameState): Tile | null {
+function detectDiscardedTile(
+  prevState: GameState,
+  nextState: GameState,
+): Tile | null {
   for (let index = 0; index < nextState.players.length; index += 1) {
     const prevDiscards = prevState.players[index].discards;
     const nextDiscards = nextState.players[index].discards;
@@ -72,22 +79,37 @@ export function detectActionVoice(prevState: GameState, nextState: GameState) {
 
   if (!prevState.winInfo && nextState.winInfo) {
     const tileText = tileToVoiceText(nextState.winInfo.tile);
+    const huSummaryVoiceRaw = huSummaryText(nextState.winInfo.hu);
+    const huSummaryVoice =
+      huSummaryVoiceRaw === "平胡" ? "" : huSummaryVoiceRaw;
     if (nextState.winInfo.specials.includes(HU_SPECIAL.TIAN_HU)) {
-      return `天胡 ${tileText}`;
+      return huSummaryVoice
+        ? `天胡 ${tileText}，${huSummaryVoice}`
+        : `天胡 ${tileText}`;
     }
     if (nextState.winInfo.specials.includes(HU_SPECIAL.DI_HU)) {
-      return `地胡 ${tileText}`;
+      return huSummaryVoice
+        ? `地胡 ${tileText}，${huSummaryVoice}`
+        : `地胡 ${tileText}`;
     }
     if (nextState.winInfo.method === WIN_METHOD.ZIMO) {
-      return `自摸 ${tileText}`;
+      return huSummaryVoice
+        ? `自摸 ${tileText}，${huSummaryVoice}`
+        : `自摸 ${tileText}`;
     }
     if (nextState.winInfo.method === WIN_METHOD.GANG_SHANG_HUA) {
-      return `杠上花 ${tileText}`;
+      return huSummaryVoice
+        ? `杠上花 ${tileText}，${huSummaryVoice}`
+        : `杠上花 ${tileText}`;
     }
     if (nextState.winInfo.method === WIN_METHOD.QIANG_GANG) {
-      return `抢杠胡 ${tileText}`;
+      return huSummaryVoice
+        ? `抢杠胡 ${tileText}，${huSummaryVoice}`
+        : `抢杠胡 ${tileText}`;
     }
-    return `胡 ${tileText}`;
+    return huSummaryVoice
+      ? `胡 ${tileText}，${huSummaryVoice}`
+      : `胡 ${tileText}`;
   }
 
   const meld = detectMeldChange(prevState, nextState);
@@ -97,12 +119,12 @@ export function detectActionVoice(prevState: GameState, nextState: GameState) {
       return `碰 ${tileText}`;
     }
     if (meld.type === MELD_TYPE.MING_GANG) {
-      return `明杠 ${tileText}`;
+      return `杠 ${tileText}`; // 明杠别名：杠
     }
     if (meld.type === MELD_TYPE.AN_GANG) {
       return "暗杠";
     }
-    return `补杠 ${tileText}`;
+    return `转弯杠 ${tileText}`; // 补杠别名：转弯杠
   }
 
   const discarded = detectDiscardedTile(prevState, nextState);

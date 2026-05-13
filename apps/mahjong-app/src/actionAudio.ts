@@ -1,107 +1,184 @@
+import { getStoredToken } from "./auth/storage";
+import { API_BASE_URL } from "./api/client";
+
 const WINDOW_EVENT = {
   POINTER_DOWN: "pointerdown",
   TOUCH_START: "touchstart",
   KEY_DOWN: "keydown",
 } as const;
 
-const LANGUAGE = {
-  CHINESE_PREFIX: "zh",
-  CHINESE_MAINLAND: "zh-CN",
-} as const;
+const VOICE_ENABLED_STORAGE_KEY = "mahjong_app_voice_enabled";
+const VOICE_SESSION_PATH = "/api/tts/session";
+const MAX_TEXT_LENGTH = 120;
 
 let unlockBound = false;
-let speechPrimed = false;
-let voicesListenerBound = false;
-let cachedVoices: SpeechSynthesisVoice[] = [];
+let playbackUnlocked = false;
+let playbackQueue: Promise<void> = Promise.resolve();
+let activeAudio: HTMLAudioElement | null = null;
+let voiceEnabledInitialized = false;
+let voiceEnabled = true;
 
-function getSpeechSynthesisSafe() {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    return null;
-  }
-  return window.speechSynthesis;
-}
-
-function refreshVoices() {
-  const synthesis = getSpeechSynthesisSafe();
-  if (!synthesis) {
-    return;
-  }
-  cachedVoices = synthesis.getVoices();
-}
-
-function ensureVoicesReady() {
-  const synthesis = getSpeechSynthesisSafe();
-  if (!synthesis) {
+function ensureVoiceEnabledInitialized() {
+  if (voiceEnabledInitialized) {
     return;
   }
 
-  if (!voicesListenerBound) {
-    voicesListenerBound = true;
-    synthesis.addEventListener("voiceschanged", refreshVoices);
-  }
+  voiceEnabledInitialized = true;
 
-  if (cachedVoices.length === 0) {
-    refreshVoices();
-  }
-}
-
-function pickChineseVoice() {
-  if (cachedVoices.length === 0) {
-    return null;
-  }
-
-  const mainlandVoice = cachedVoices.find(
-    (voice) =>
-      voice.lang.toLowerCase() === LANGUAGE.CHINESE_MAINLAND.toLowerCase(),
-  );
-  if (mainlandVoice) {
-    return mainlandVoice;
-  }
-
-  return (
-    cachedVoices.find((voice) =>
-      voice.lang.toLowerCase().startsWith(LANGUAGE.CHINESE_PREFIX),
-    ) ?? null
-  );
-}
-
-function primeSpeechSynthesis() {
-  if (speechPrimed) {
-    return;
-  }
-
-  const synthesis = getSpeechSynthesisSafe();
-  if (!synthesis) {
+  if (typeof window === "undefined") {
+    voiceEnabled = true;
     return;
   }
 
   try {
-    // On some mobile browsers, speaking once inside a user gesture helps unlock TTS.
-    const probe = new SpeechSynthesisUtterance(" ");
-    probe.lang = LANGUAGE.CHINESE_MAINLAND;
-    probe.volume = 0;
-    probe.rate = 1;
-    probe.pitch = 1;
+    const raw = window.localStorage.getItem(VOICE_ENABLED_STORAGE_KEY);
+    voiceEnabled = raw === null ? true : raw === "true";
+  } catch {
+    voiceEnabled = true;
+  }
+}
 
-    synthesis.cancel();
-    synthesis.resume();
-    synthesis.speak(probe);
-    speechPrimed = true;
+function persistVoiceEnabled(enabled: boolean) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(VOICE_ENABLED_STORAGE_KEY, String(enabled));
   } catch {
     // no-op
   }
 }
 
-/**
- * 在用户手势中主动触发一次 TTS 初始化，提升移动端语音播报成功率。
- */
-export function activateVoicePlayback() {
-  ensureVoicesReady();
-  primeSpeechSynthesis();
+function normalizeVoiceText(rawText: string): string {
+  return rawText.trim().replace(/\s+/g, " ");
+}
+
+function playUrl(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    activeAudio = audio;
+    audio.preload = "auto";
+    audio.volume = 0.96;
+
+    const cleanup = () => {
+      audio.removeEventListener("ended", handleDone);
+      audio.removeEventListener("error", handleDone);
+      if (activeAudio === audio) {
+        activeAudio = null;
+      }
+    };
+
+    const handleDone = () => {
+      cleanup();
+      resolve();
+    };
+
+    audio.addEventListener("ended", handleDone);
+    audio.addEventListener("error", handleDone);
+
+    void audio.play().catch(() => {
+      cleanup();
+      resolve();
+    });
+  });
+}
+
+function toAbsoluteStreamUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  const base = API_BASE_URL || window.location.origin;
+  return new URL(pathOrUrl, base).toString();
+}
+
+async function requestTtsStreamUrl(text: string): Promise<string | null> {
+  try {
+    const token = getStoredToken();
+    if (!token) {
+      return null;
+    }
+
+    const response = await fetch(
+      new URL(VOICE_SESSION_PATH, API_BASE_URL || window.location.origin).toString(),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text }),
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const body = (await response.json()) as {
+      status?: string;
+      streamUrl?: string;
+    };
+    const streamUrl = body.streamUrl;
+    if (typeof streamUrl !== "string" || !streamUrl.trim()) {
+      return null;
+    }
+
+    return toAbsoluteStreamUrl(streamUrl);
+  } catch {
+    return null;
+  }
+}
+
+function canPlayNow() {
+  return typeof window !== "undefined" && playbackUnlocked && voiceEnabled;
+}
+
+function stopActiveAudio() {
+  if (!activeAudio) {
+    return;
+  }
+
+  activeAudio.pause();
+  activeAudio.currentTime = 0;
+  activeAudio = null;
+}
+
+function clearPlaybackQueue() {
+  playbackQueue = Promise.resolve();
+}
+
+function disableVoicePlayback() {
+  clearPlaybackQueue();
+  stopActiveAudio();
+}
+
+export function isVoiceEnabled() {
+  ensureVoiceEnabledInitialized();
+  return voiceEnabled;
+}
+
+export function setVoiceEnabled(enabled: boolean) {
+  ensureVoiceEnabledInitialized();
+  voiceEnabled = enabled;
+  persistVoiceEnabled(enabled);
+
+  if (!enabled) {
+    disableVoicePlayback();
+  }
 }
 
 /**
- * 注册全局手势监听：首次触发时尝试解锁语音播报能力并预加载 voice 列表。
+ * 在用户手势中主动解锁音频播放能力。
+ */
+export function activateVoicePlayback() {
+  ensureVoiceEnabledInitialized();
+  playbackUnlocked = true;
+}
+
+/**
+ * 注册全局手势监听：首次交互时解锁音频播放。
  */
 export function installAudioUnlock() {
   if (typeof window === "undefined" || unlockBound) {
@@ -125,33 +202,34 @@ export function installAudioUnlock() {
 }
 
 /**
- * 调用浏览器语音合成朗读动作文案，优先选择中文语音。
+ * 使用服务端 TTS 流式地址播放动作文案，失败时静默跳过。
  */
 export function playActionVoice(voice: string) {
-  const synthesis = getSpeechSynthesisSafe();
-  if (!synthesis) {
+  ensureVoiceEnabledInitialized();
+
+  if (!canPlayNow()) {
     return;
   }
 
-  ensureVoicesReady();
-
-  const utterance = new SpeechSynthesisUtterance(voice);
-  const chineseVoice = pickChineseVoice();
-
-  utterance.lang = LANGUAGE.CHINESE_MAINLAND;
-  utterance.rate = 1;
-  utterance.pitch = 1;
-  utterance.volume = 0.96;
-
-  if (chineseVoice) {
-    utterance.voice = chineseVoice;
+  const text = normalizeVoiceText(voice);
+  if (!text || text.length > MAX_TEXT_LENGTH) {
+    return;
   }
 
-  try {
-    synthesis.cancel();
-    synthesis.resume();
-    synthesis.speak(utterance);
-  } catch {
-    // no-op
-  }
+  playbackQueue = playbackQueue
+    .then(async () => {
+      if (!voiceEnabled) {
+        return;
+      }
+
+      const streamUrl = await requestTtsStreamUrl(text);
+      if (!streamUrl || !voiceEnabled) {
+        return;
+      }
+
+      await playUrl(streamUrl);
+    })
+    .catch(() => {
+      // no-op
+    });
 }

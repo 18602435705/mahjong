@@ -6,6 +6,7 @@ import { appConfig } from "./config.js";
 import { initDatabase, pingDatabase } from "./db.js";
 import authRouter from "./routes/auth.js";
 import roomsRouter from "./routes/rooms.js";
+import ttsRouter from "./routes/tts.js";
 import { attachSocketServer } from "./realtime/socketServer.js";
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(compression());
 
 app.use("/api/auth", authRouter);
 app.use("/api/rooms", roomsRouter);
+app.use("/api/tts", ttsRouter);
 
 app.get("/", (_req, res) => {
   res.send("Hello from mahjong-server");
