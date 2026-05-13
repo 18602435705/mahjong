@@ -30,6 +30,11 @@ function PlayerSeat(props: PlayerSeatProps) {
   const dispatch = useGameStore((store) => store.dispatch);
   const selectedDiscard = useGameStore((store) => store.selectedDiscard);
   const setSelectedDiscard = useGameStore((store) => store.setSelectedDiscard);
+  const roomSeats = useGameStore((store) => store.roomSeats);
+  const meSeat = useGameStore((store) => {
+    const me = store.roomSeats.find((seat) => seat.isSelf);
+    return me?.index ?? 0;
+  });
 
   const player = state.players[playerIndex];
   const title = player.name;
@@ -90,6 +95,8 @@ function PlayerSeat(props: PlayerSeatProps) {
         seatPlayer.discards.length === 0 && seatPlayer.melds.length === 0,
     );
   const handEntries = player.hand.map((tile, index) => ({ tile, index }));
+  const absoluteSeatIndex = (meSeat + playerIndex) % 4;
+  const seatOnline = roomSeats[absoluteSeatIndex]?.online;
 
   let drawnEntryIndex = -1;
   if (
@@ -124,6 +131,7 @@ function PlayerSeat(props: PlayerSeatProps) {
         title={title}
         score={player.score}
         handCount={shouldShowHand ? undefined : player.hand.length}
+        online={seatOnline}
       />
 
       <div

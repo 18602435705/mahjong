@@ -8,6 +8,7 @@ export interface RoomSeatView {
   username: string | null;
   ready: boolean;
   isSelf: boolean;
+  online: boolean;
 }
 
 export interface RoomSnapshot {

@@ -82,7 +82,7 @@ function RoomLobbyPanel({
           <li key={`seat-${seat.index}`}>
             {`座位 ${seat.index + 1} · ${seat.username ?? "空位"}`}
             {seat.isSelf ? "（你）" : ""}
-            {seat.username ? " · 已就绪" : ""}
+            {seat.username ? ` · ${seat.online ? "在线" : "离线"} · 已就绪` : ""}
           </li>
         ))}
       </ul>

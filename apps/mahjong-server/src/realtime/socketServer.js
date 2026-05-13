@@ -70,6 +70,7 @@ function registerRoomHandlers(socket) {
     }
 
     const cleanup = subscribeRoom(user.id, roomCode, {
+      connectionId: socket.id,
       send: (event, payload) => {
         socket.emit(event, payload);
       },

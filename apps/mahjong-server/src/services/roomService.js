@@ -15,6 +15,7 @@ const VALID_PRESET_IDS = new Set(Object.values(INITIAL_DEAL_PRESET));
 
 const rooms = new Map();
 const roomSubscribers = new Map();
+const roomOnlineConnections = new Map();
 
 /**
  * 房间服务统一错误类型，携带可直接映射到 HTTP 的状态码。
@@ -121,18 +122,144 @@ function getOrCreateSubscriberBucket(roomCode) {
 }
 
 /**
+ * 获取房间在线连接表，不存在则创建。
+ */
+function getOrCreateOnlineConnectionBucket(roomCode) {
+  let bucket = roomOnlineConnections.get(roomCode);
+  if (!bucket) {
+    bucket = new Map();
+    roomOnlineConnections.set(roomCode, bucket);
+  }
+  return bucket;
+}
+
+/**
+ * 注册用户的一条在线连接；仅在离线转在线时返回 true。
+ */
+function registerOnlineConnection(roomCode, userId, connectionId) {
+  if (!connectionId) {
+    return false;
+  }
+
+  const bucket = getOrCreateOnlineConnectionBucket(roomCode);
+  let userConnections = bucket.get(userId);
+  if (!userConnections) {
+    userConnections = new Set();
+    bucket.set(userId, userConnections);
+  }
+
+  const wasOnline = userConnections.size > 0;
+  userConnections.add(connectionId);
+  return !wasOnline && userConnections.size > 0;
+}
+
+/**
+ * 注销用户的一条在线连接；仅在在线转离线时返回 true。
+ */
+function unregisterOnlineConnection(roomCode, userId, connectionId) {
+  if (!connectionId) {
+    return false;
+  }
+
+  const bucket = roomOnlineConnections.get(roomCode);
+  if (!bucket) {
+    return false;
+  }
+
+  const userConnections = bucket.get(userId);
+  if (!userConnections) {
+    return false;
+  }
+
+  const wasOnline = userConnections.size > 0;
+  userConnections.delete(connectionId);
+
+  const isOnline = userConnections.size > 0;
+  if (!isOnline) {
+    bucket.delete(userId);
+  }
+  if (bucket.size === 0) {
+    roomOnlineConnections.delete(roomCode);
+  }
+
+  return wasOnline && !isOnline;
+}
+
+/**
+ * 移除指定用户在房间中的全部在线连接；有变化时返回 true。
+ */
+function unregisterAllOnlineConnections(roomCode, userId) {
+  const bucket = roomOnlineConnections.get(roomCode);
+  if (!bucket) {
+    return false;
+  }
+
+  const userConnections = bucket.get(userId);
+  if (!userConnections || userConnections.size === 0) {
+    return false;
+  }
+
+  bucket.delete(userId);
+  if (bucket.size === 0) {
+    roomOnlineConnections.delete(roomCode);
+  }
+
+  return true;
+}
+
+/**
+ * 判断用户在目标房间是否至少存在一条在线连接。
+ */
+function isUserOnline(roomCode, userId) {
+  const bucket = roomOnlineConnections.get(roomCode);
+  if (!bucket) {
+    return false;
+  }
+
+  return (bucket.get(userId)?.size ?? 0) > 0;
+}
+
+function publishPresenceChangedRoomUpdate(roomCode, hasChanged) {
+  if (!hasChanged) {
+    return;
+  }
+
+  const room = rooms.get(roomCode);
+  if (!room) {
+    return;
+  }
+
+  publishRoomUpdate(room);
+}
+
+/**
  * 从房间实时订阅集合中移除指定连接。
  */
-function removeSubscriber(roomCode, subscription) {
+function removeSubscriber(roomCode, subscription, options = {}) {
+  const shouldPublishPresence = options.publishPresence !== false;
   const bucket = roomSubscribers.get(roomCode);
+  const hasChanged = unregisterOnlineConnection(
+    roomCode,
+    subscription.userId,
+    subscription.connectionId,
+  );
+
   if (!bucket) {
-    return;
+    if (shouldPublishPresence) {
+      publishPresenceChangedRoomUpdate(roomCode, hasChanged);
+    }
+    return hasChanged;
   }
 
   bucket.delete(subscription);
   if (bucket.size === 0) {
     roomSubscribers.delete(roomCode);
   }
+
+  if (shouldPublishPresence) {
+    publishPresenceChangedRoomUpdate(roomCode, hasChanged);
+  }
+  return hasChanged;
 }
 
 /**
@@ -141,10 +268,12 @@ function removeSubscriber(roomCode, subscription) {
 function closeSubscribers(roomCode) {
   const bucket = roomSubscribers.get(roomCode);
   if (!bucket) {
+    roomOnlineConnections.delete(roomCode);
     return;
   }
 
   for (const subscription of bucket) {
+    unregisterOnlineConnection(roomCode, subscription.userId, subscription.connectionId);
     try {
       subscription.close?.();
     } catch {
@@ -153,6 +282,7 @@ function closeSubscribers(roomCode) {
   }
 
   roomSubscribers.delete(roomCode);
+  roomOnlineConnections.delete(roomCode);
 }
 
 /**
@@ -161,6 +291,7 @@ function closeSubscribers(roomCode) {
 function removeUserSubscribers(roomCode, userId) {
   const bucket = roomSubscribers.get(roomCode);
   if (!bucket) {
+    unregisterAllOnlineConnections(roomCode, userId);
     return;
   }
 
@@ -170,6 +301,7 @@ function removeUserSubscribers(roomCode, userId) {
     }
 
     bucket.delete(subscription);
+    unregisterOnlineConnection(roomCode, subscription.userId, subscription.connectionId);
     try {
       subscription.close?.();
     } catch {
@@ -180,6 +312,8 @@ function removeUserSubscribers(roomCode, userId) {
   if (bucket.size === 0) {
     roomSubscribers.delete(roomCode);
   }
+
+  unregisterAllOnlineConnections(roomCode, userId);
 }
 
 /**
@@ -327,7 +461,7 @@ function rotateAndMaskGameState(gameState, selfSeat) {
 /**
  * 生成单个座位的前端展示结构。
  */
-function toSeatView(seat, index, userId) {
+function toSeatView(roomCode, seat, index, userId) {
   if (!seat) {
     return {
       index,
@@ -335,6 +469,7 @@ function toSeatView(seat, index, userId) {
       username: null,
       ready: false,
       isSelf: false,
+      online: false,
     };
   }
 
@@ -344,6 +479,7 @@ function toSeatView(seat, index, userId) {
     username: seat.username,
     ready: seat.ready,
     isSelf: seat.userId === userId,
+    online: isUserOnline(roomCode, seat.userId),
   };
 }
 
@@ -366,7 +502,7 @@ function buildRoomView(room, userId) {
       room.ownerUserId === userId &&
       room.seats.every((seat) => seat !== null) &&
       room.seats.every((seat) => seat?.ready === true),
-    seats: room.seats.map((seat, index) => toSeatView(seat, index, userId)),
+    seats: room.seats.map((seat, index) => toSeatView(room.code, seat, index, userId)),
     game:
       room.gameState && room.status === "playing"
         ? rotateAndMaskGameState(room.gameState, selfSeat)
@@ -383,6 +519,7 @@ function publishRoomUpdate(room) {
     return;
   }
 
+  let shouldRepublishPresence = false;
   for (const subscription of bucket) {
     try {
       const view = buildRoomView(room, subscription.userId);
@@ -391,13 +528,19 @@ function publishRoomUpdate(room) {
         room: view,
       });
     } catch {
-      removeSubscriber(room.code, subscription);
+      shouldRepublishPresence =
+        removeSubscriber(room.code, subscription, { publishPresence: false }) ||
+        shouldRepublishPresence;
       try {
         subscription.close?.();
       } catch {
         // noop
       }
     }
+  }
+
+  if (shouldRepublishPresence) {
+    publishRoomUpdate(room);
   }
 }
 
@@ -468,7 +611,7 @@ function publishRoomEnded(room, result) {
         result,
       });
     } catch {
-      removeSubscriber(room.code, subscription);
+      removeSubscriber(room.code, subscription, { publishPresence: false });
       try {
         subscription.close?.();
       } catch {
@@ -814,10 +957,16 @@ export function subscribeRoom(userId, roomCode, subscriber) {
 
   const subscription = {
     userId,
+    connectionId: subscriber.connectionId,
     send: subscriber.send,
     close: subscriber.close,
   };
   getOrCreateSubscriberBucket(room.code).add(subscription);
+  const hasChanged = registerOnlineConnection(
+    room.code,
+    userId,
+    subscription.connectionId,
+  );
 
   const cleanup = () => {
     removeSubscriber(room.code, subscription);
@@ -833,6 +982,10 @@ export function subscribeRoom(userId, roomCode, subscriber) {
     status: "ok",
     room: currentView,
   });
+
+  if (hasChanged) {
+    publishRoomUpdate(room);
+  }
 
   return cleanup;
 }
