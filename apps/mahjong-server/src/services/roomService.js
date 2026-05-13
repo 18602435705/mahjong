@@ -220,7 +220,7 @@ function createSeat(user) {
   return {
     userId: user.id,
     username: user.username,
-    ready: false,
+    ready: true,
     joinedAt: new Date().toISOString(),
   };
 }
@@ -564,6 +564,12 @@ export function joinRoom(user, roomCode) {
   const room = getRoomOrThrow(roomCode);
   const existingSeat = findSeatIndex(room, user.id);
   if (existingSeat >= 0) {
+    if (room.status === "lobby" && !room.seats[existingSeat]?.ready) {
+      room.seats[existingSeat].ready = true;
+      room.version += 1;
+      touchRoom(room);
+      publishRoomUpdate(room);
+    }
     return buildRoomView(room, user.id);
   }
 

@@ -27,14 +27,12 @@ const GameEffects = memo(function GameEffects() {
 
 type RoomLobbyPanelProps = {
   roomCode: string;
-  sendReady: (ready: boolean) => Promise<void>;
   sendStart: () => Promise<void>;
   sendLeave: () => Promise<void>;
 };
 
 function RoomLobbyPanel({
   roomCode,
-  sendReady,
   sendStart,
   sendLeave,
 }: RoomLobbyPanelProps) {
@@ -43,27 +41,6 @@ function RoomLobbyPanel({
   const roomCanStart = useGameStore((store) => store.roomCanStart);
   const [isBusy, setIsBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
-
-  const selfSeat = useMemo(
-    () => roomSeats.find((seat) => seat.isSelf),
-    [roomSeats],
-  );
-  const isSelfReady = selfSeat?.ready ?? false;
-
-  async function handleToggleReady() {
-    setIsBusy(true);
-    setFeedback(isSelfReady ? "取消准备中..." : "准备中...");
-
-    try {
-      await sendReady(!isSelfReady);
-      setFeedback(isSelfReady ? "已取消准备" : "已准备，等待其他玩家");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "设置准备状态失败";
-      setFeedback(message);
-    } finally {
-      setIsBusy(false);
-    }
-  }
 
   async function handleStartGame() {
     setIsBusy(true);
@@ -98,22 +75,19 @@ function RoomLobbyPanel({
   return (
     <section className="room-lobby-panel" aria-live="polite">
       <h2>房间 {roomCode}</h2>
-      <p>等待全部玩家准备后由房主开局。</p>
+      <p>玩家入座后默认已准备，等待玩家到齐后由房主开局。</p>
 
       <ul className="room-seat-list">
         {roomSeats.map((seat) => (
           <li key={`seat-${seat.index}`}>
             {`座位 ${seat.index + 1} · ${seat.username ?? "空位"}`}
             {seat.isSelf ? "（你）" : ""}
-            {seat.username ? (seat.ready ? " · 已准备" : " · 未准备") : ""}
+            {seat.username ? " · 已就绪" : ""}
           </li>
         ))}
       </ul>
 
       <div className="room-lobby-actions">
-        <button type="button" disabled={isBusy} onClick={() => void handleToggleReady()}>
-          {isSelfReady ? "取消准备" : "准备"}
-        </button>
         <button
           type="button"
           disabled={isBusy || !roomCanStart}
@@ -262,7 +236,6 @@ function GamePage() {
   const {
     isConnecting,
     connectionError,
-    sendReady,
     sendStart,
     sendLeave,
     sendRematchReady,
@@ -318,7 +291,6 @@ function GamePage() {
       {showRoomLobby ? (
         <RoomLobbyPanel
           roomCode={roomCode}
-          sendReady={sendReady}
           sendStart={sendStart}
           sendLeave={sendLeave}
         />

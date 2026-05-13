@@ -16,7 +16,7 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
   const roomCode = useGameStore((store) => store.roomCode);
   const statusText = useGameStore((store) => {
     if (store.roomStatus === "lobby") {
-      return "房间中：等待全部玩家准备并开局";
+      return "房间中：等待玩家到齐后由房主开局";
     }
     return selectStatusText(store.game);
   });

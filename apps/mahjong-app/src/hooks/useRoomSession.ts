@@ -267,20 +267,6 @@ export function useRoomSession(roomCode: string | null) {
   );
 
   /**
-   * 发送“准备/取消准备”请求。
-   */
-  const sendReady = useCallback(
-    async (ready: boolean) => {
-      await emitRoomRequest<{ room: RoomSnapshot }>(
-        "room.ready",
-        { ready },
-        "设置准备状态失败",
-      );
-    },
-    [emitRoomRequest],
-  );
-
-  /**
    * 发送“开始对局”请求。
    */
   const sendStart = useCallback(async () => {
@@ -514,7 +500,6 @@ export function useRoomSession(roomCode: string | null) {
   return {
     isConnecting,
     connectionError,
-    sendReady,
     sendStart,
     sendLeave,
     sendRematchReady,
