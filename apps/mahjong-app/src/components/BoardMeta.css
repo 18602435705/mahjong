@@ -106,6 +106,21 @@
   );
 }
 
+.btn-danger {
+  background: linear-gradient(
+    140deg,
+    rgba(249, 210, 190, 0.98),
+    rgba(236, 170, 144, 0.96)
+  );
+  border-color: rgba(171, 87, 56, 0.58);
+  color: #5a2010;
+}
+
+.btn-danger:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .menu-item:hover {
   filter: brightness(1.03);
 }

@@ -6,12 +6,25 @@ import { isVoiceEnabled, setVoiceEnabled } from "../actionAudio";
 import { selectStatusText } from "../store/gameSelectors";
 import { useGameStore } from "../store/gameStore";
 
+type BoardMetaProps = {
+  leaveRoom: () => Promise<void>;
+  endMatch: () => Promise<void>;
+  isOwner: boolean;
+  canShowEndMatch: boolean;
+};
+
 /**
  * 渲染顶部元信息区域：菜单、局数与状态文案。
  */
-function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
+function BoardMeta({
+  leaveRoom,
+  endMatch,
+  isOwner,
+  canShowEndMatch,
+}: BoardMetaProps) {
   const navigate = useNavigate();
   const [voiceEnabled, setVoiceEnabledState] = useState(() => isVoiceEnabled());
+  const [isEndingMatch, setIsEndingMatch] = useState(false);
   const round = useGameStore((store) => store.game.round);
   const roomCode = useGameStore((store) => store.roomCode);
   const statusText = useGameStore((store) => {
@@ -39,6 +52,26 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
     const next = !voiceEnabled;
     setVoiceEnabled(next);
     setVoiceEnabledState(next);
+  }
+
+  async function handleEndMatch() {
+    if (!isOwner || !roomCode || isEndingMatch) {
+      return;
+    }
+
+    const shouldProceed = window.confirm("确认结束对局并进入结算页吗？");
+    if (!shouldProceed) {
+      return;
+    }
+
+    setIsEndingMatch(true);
+    try {
+      await endMatch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "结束对局失败";
+      window.alert(message);
+      setIsEndingMatch(false);
+    }
   }
 
   return (
@@ -72,6 +105,18 @@ function BoardMeta({ leaveRoom }: { leaveRoom: () => Promise<void> }) {
               >
                 {voiceEnabled ? "声音：开" : "声音：关"}
               </button>
+              {isOwner && canShowEndMatch ? (
+                <Popover.Close asChild>
+                  <button
+                    type="button"
+                    className="menu-item btn-danger"
+                    disabled={isEndingMatch}
+                    onClick={() => void handleEndMatch()}
+                  >
+                    {isEndingMatch ? "结束中..." : "结束对局"}
+                  </button>
+                </Popover.Close>
+              ) : null}
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>

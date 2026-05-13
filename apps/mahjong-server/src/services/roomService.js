@@ -405,8 +405,8 @@ function publishRoomUpdate(room) {
  * 根据当前房间积分生成结算快照，按分数降序、座位升序计算名次。
  */
 function buildMatchResult(room) {
-  if (!room.gameState) {
-    throw new RoomError(409, "Game is not active");
+  if (room.status === "playing" && !room.gameState) {
+    throw new RoomError(409, "Game state is unavailable");
   }
 
   const players = room.seats
@@ -419,7 +419,10 @@ function buildMatchResult(room) {
         seatIndex,
         userId: seat.userId,
         username: seat.username,
-        score: room.gameState.players[seatIndex]?.score ?? 0,
+        score:
+          room.status === "playing"
+            ? room.gameState?.players[seatIndex]?.score ?? 0
+            : 0,
       };
     })
     .filter(Boolean);
@@ -781,12 +784,8 @@ export function endMatch(userId, roomCode) {
     throw new RoomError(403, "Only room owner can end the match");
   }
 
-  if (room.status !== "playing" || !room.gameState) {
-    throw new RoomError(409, "Game is not active");
-  }
-
-  if (room.gameState.phase !== PHASE.GAME_OVER) {
-    throw new RoomError(409, "Match can only end after round settlement");
+  if (room.status !== "lobby" && room.status !== "playing") {
+    throw new RoomError(409, "Room is not active");
   }
 
   const result = buildMatchResult(room);

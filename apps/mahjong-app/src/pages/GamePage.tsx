@@ -279,7 +279,12 @@ function GamePage() {
   return (
     <div className="mahjong-app">
       <GameEffects />
-      <BoardMeta leaveRoom={sendLeave} />
+      <BoardMeta
+        leaveRoom={sendLeave}
+        endMatch={sendEndMatch}
+        isOwner={isRoomOwner}
+        canShowEndMatch={!showRoundSettlementModal}
+      />
 
       {showLoading ? (
         <section className="room-lobby-panel">
