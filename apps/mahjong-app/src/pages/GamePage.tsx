@@ -11,7 +11,7 @@ import { useGameStore } from "../store/gameStore";
 import type { RoomSeatView } from "../types/room";
 import "../App.css";
 
-const AI_SEATS = [
+const OPPONENT_SEATS = [
   { playerIndex: 2, showHand: false, seatClass: "seat-top" },
   { playerIndex: 3, showHand: false, seatClass: "seat-left" },
   { playerIndex: 1, showHand: false, seatClass: "seat-right" },
@@ -303,7 +303,7 @@ function GamePage() {
 
       {showTable ? (
         <main className="table-grid">
-          {AI_SEATS.map((seat) => (
+          {OPPONENT_SEATS.map((seat) => (
             <PlayerSeat
               key={seat.seatClass}
               playerIndex={seat.playerIndex}
