@@ -491,10 +491,10 @@ function buildRoomView(room, userId) {
     code: room.code,
     status: room.status,
     ownerUserId: room.ownerUserId,
-    meSeat: selfSeat,
     version: room.version,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
+    meSeat: selfSeat,
     canStart:
       room.status === "lobby" &&
       room.ownerUserId === userId &&

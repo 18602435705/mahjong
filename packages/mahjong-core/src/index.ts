@@ -35,7 +35,7 @@ export interface Meld {
 }
 
 export interface PlayerState {
-  id: number;
+  index: number;
   name: string;
   isHuman: boolean;
   hand: Tile[];
@@ -817,7 +817,8 @@ function createRandomRoundState(scores: number[], round: number): GameState {
     winInfo: null,
   };
 
-  appendLog(state, `第 ${round} 局开始，庄家是${players[0].name}`);
+  const dealerName = players[0].name.trim() || "1号位玩家";
+  appendLog(state, `第 ${round} 局开始，庄家是${dealerName}`);
 
   return state;
 }
@@ -861,7 +862,8 @@ function createPresetRoundState(
   const presetLabel =
     INITIAL_DEAL_PRESET_OPTIONS.find((option) => option.id === presetId)?.label ??
     presetId;
-  appendLog(state, `第 ${round} 局开始（预设：${presetLabel}），庄家是${players[0].name}`);
+  const dealerName = players[0].name.trim() || "1号位玩家";
+  appendLog(state, `第 ${round} 局开始（预设：${presetLabel}），庄家是${dealerName}`);
 
   return state;
 }
@@ -871,9 +873,9 @@ function createPresetRoundState(
  */
 function createPlayers(scores: number[]) {
   const players: PlayerState[] = Array.from({ length: 4 }, (_, index) => ({
-    id: index,
-    name: PLAYER_NAMES[index],
-    isHuman: index === 0,
+    index,
+    name: "",
+    isHuman: true,
     hand: [],
     justDrawnTile: null,
     justDrawnFromGang: false,
