@@ -19,11 +19,7 @@ function isGameRoute(pathname: string) {
   return pathname.startsWith("/game");
 }
 
-export default function RouteOrientationManager({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function RouteOrientation({ children }: { children: ReactNode }) {
   const location = useLocation();
   const isGamePage = useMemo(
     () => isGameRoute(location.pathname),
@@ -156,4 +152,14 @@ export default function RouteOrientationManager({
       ) : null}
     </>
   );
+}
+
+export default function RouteOrientationManager({
+  children,
+  enable = true,
+}: {
+  children: ReactNode;
+  enable?: boolean;
+}) {
+  return enable ? <RouteOrientation>{children}</RouteOrientation> : children;
 }
