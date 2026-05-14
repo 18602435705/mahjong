@@ -4,6 +4,7 @@ import { installAudioUnlock } from "./actionAudio";
 import { AuthProvider } from "./auth/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import GamePage from "./pages/GamePage";
+import HistoryPage from "./pages/HistoryPage";
 import LobbyPage from "./pages/LobbyPage";
 import ResultPage from "./pages/ResultPage";
 import {
@@ -22,6 +23,7 @@ function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/lobby" element={<LobbyPage />} />
+        <Route path="/history" element={<HistoryPage />} />
         <Route path="/game" element={<GamePage />} />
         <Route path="/result" element={<ResultPage />} />
       </Route>

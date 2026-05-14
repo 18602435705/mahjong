@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getAuthUser, requireAuth } from "../middleware/requireAuth.js";
 import {
   createRoom,
+  getMatchHistory,
   getRoomView,
   joinRoom,
   RoomError,
@@ -48,6 +49,27 @@ router.post("/join", (req, res, next) => {
     res.json({
       status: "ok",
       room,
+    });
+  } catch (error) {
+    try {
+      handleRouteError(error, res);
+    } catch (unknownError) {
+      next(unknownError);
+    }
+  }
+});
+
+router.get("/history/list", async (req, res, next) => {
+  try {
+    const user = getAuthUser(req);
+    const history = await getMatchHistory(user.id, {
+      cursor: req.query?.cursor,
+      limit: req.query?.limit,
+    });
+
+    res.json({
+      status: "ok",
+      ...history,
     });
   } catch (error) {
     try {

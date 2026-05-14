@@ -237,8 +237,6 @@ const SPECIAL_EXTRA_FAN: Record<HuSpecialType, number> = {
   dihu: 20,
 };
 
-const PLAYER_NAMES = ["你", "AI-右", "AI-上", "AI-左"];
-
 const TILE_TYPES: Tile[] = SUITS.flatMap((suit) =>
   Array.from({ length: 9 }, (_, index) => `${suit}${index + 1}` as Tile),
 );

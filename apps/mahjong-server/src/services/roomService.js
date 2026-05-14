@@ -6,6 +6,7 @@ import {
   PHASE,
 } from "../../../../packages/mahjong-core/dist/index.js";
 import { customAlphabet } from "nanoid";
+import { getDbPool } from "../db.js";
 
 const HIDDEN_TILE = "*";
 const ROOM_CODE_DIGITS = "0123456789";
@@ -17,6 +18,8 @@ const VALID_PRESET_IDS = new Set(Object.values(INITIAL_DEAL_PRESET));
 const rooms = new Map();
 const roomSubscribers = new Map();
 const roomOnlineConnections = new Map();
+const HISTORY_PAGE_SIZE_DEFAULT = 20;
+const HISTORY_PAGE_SIZE_MAX = 50;
 
 /**
  * 房间服务统一错误类型，携带可直接映射到 HTTP 的状态码。
@@ -595,6 +598,103 @@ function buildMatchResult(room) {
   };
 }
 
+function toHistoryPageSize(limit) {
+  const parsed = Number(limit);
+  if (!Number.isFinite(parsed)) {
+    return HISTORY_PAGE_SIZE_DEFAULT;
+  }
+
+  return Math.max(1, Math.min(HISTORY_PAGE_SIZE_MAX, Math.trunc(parsed)));
+}
+
+function toHistoryCursor(cursor) {
+  if (cursor === undefined || cursor === null || cursor === "") {
+    return null;
+  }
+
+  const parsed = Number(cursor);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new RoomError(400, "Invalid history cursor");
+  }
+
+  return Math.trunc(parsed);
+}
+
+function toValidDate(isoDateTime) {
+  const date = new Date(isoDateTime);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Invalid datetime value");
+  }
+
+  return date;
+}
+
+async function persistMatchResult(room, result) {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+  const roomInstanceKey = `${room.code}:${room.createdAt}`;
+  const endedAt = toValidDate(result.endedAt);
+
+  try {
+    await connection.beginTransaction();
+
+    await connection.execute(
+      `
+        INSERT INTO matches (
+          room_code,
+          room_instance_key,
+          owner_user_id,
+          ended_at
+        ) VALUES (?, ?, ?, ?)
+      `,
+      [room.code, roomInstanceKey, room.ownerUserId, endedAt],
+    );
+
+    const [matchRows] = await connection.execute(
+      "SELECT id FROM matches WHERE room_instance_key = ? LIMIT 1",
+      [roomInstanceKey],
+    );
+    const matchId = Number(matchRows?.[0]?.id);
+    if (!Number.isFinite(matchId) || matchId <= 0) {
+      throw new Error("Persisted match id is invalid");
+    }
+
+    const values = result.players.map((player) => [
+      matchId,
+      player.userId,
+      player.username,
+      player.seatIndex,
+      player.score,
+      player.rank,
+    ]);
+    await connection.query(
+      `
+        INSERT INTO match_players (
+          match_id,
+          user_id,
+          username_snapshot,
+          seat_index,
+          score,
+          \`rank\`
+        ) VALUES ?
+        ON DUPLICATE KEY UPDATE
+          username_snapshot = VALUES(username_snapshot),
+          seat_index = VALUES(seat_index),
+          score = VALUES(score),
+          \`rank\` = VALUES(\`rank\`)
+      `,
+      [values],
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 /**
  * 向房间内全部在线订阅者广播“对局结束”事件。
  */
@@ -923,7 +1023,7 @@ export function confirmRematch(userId, roomCode) {
 /**
  * 房主结束整场对局并解散房间，向所有在线成员推送结算结果。
  */
-export function endMatch(userId, roomCode) {
+export async function endMatch(userId, roomCode) {
   const room = getRoomOrThrow(roomCode);
   requireMembership(room, userId);
 
@@ -936,12 +1036,60 @@ export function endMatch(userId, roomCode) {
   }
 
   const result = buildMatchResult(room);
+  await persistMatchResult(room, result);
   publishRoomEnded(room, result);
 
   rooms.delete(room.code);
   closeSubscribers(room.code);
 
   return result;
+}
+
+export async function getMatchHistory(userId, options = {}) {
+  const pageSize = toHistoryPageSize(options.limit);
+  const cursor = toHistoryCursor(options.cursor);
+  const db = getDbPool();
+
+  const whereParts = ["mp.user_id = ?"];
+  const params = [userId];
+  if (cursor !== null) {
+    whereParts.push("mp.match_id < ?");
+    params.push(cursor);
+  }
+  params.push(pageSize);
+
+  const [rows] = await db.query(
+    `
+      SELECT
+        mp.match_id AS matchId,
+        m.room_code AS roomCode,
+        m.ended_at AS endedAt,
+        mp.seat_index AS mySeatIndex,
+        mp.score AS myScore,
+        mp.\`rank\` AS myRank
+      FROM match_players mp
+      INNER JOIN matches m ON m.id = mp.match_id
+      WHERE ${whereParts.join(" AND ")}
+      ORDER BY mp.match_id DESC
+      LIMIT ?
+    `,
+    params,
+  );
+
+  const items = rows.map((row) => ({
+    matchId: Number(row.matchId),
+    roomCode: String(row.roomCode),
+    endedAt: new Date(row.endedAt).toISOString(),
+    mySeatIndex: Number(row.mySeatIndex),
+    myScore: Number(row.myScore),
+    myRank: Number(row.myRank),
+  }));
+  const nextCursor = items.length === pageSize ? items[items.length - 1].matchId : null;
+
+  return {
+    items,
+    nextCursor,
+  };
 }
 
 /**

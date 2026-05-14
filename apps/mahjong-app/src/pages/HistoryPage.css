@@ -1,0 +1,124 @@
+.history-page {
+  min-height: 100svh;
+  color: #f4e9d2;
+  padding: clamp(16px, 3vw, 30px);
+  background:
+    radial-gradient(circle at 82% 12%, rgba(246, 202, 122, 0.16), transparent 38%),
+    radial-gradient(circle at 10% 88%, rgba(84, 176, 130, 0.14), transparent 40%),
+    linear-gradient(128deg, #14251d, #0f1c16 54%, #17231d);
+}
+
+.history-card {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  border-radius: 16px;
+  border: 1px solid rgba(233, 204, 151, 0.24);
+  background:
+    linear-gradient(160deg, rgba(26, 44, 36, 0.9), rgba(14, 25, 20, 0.93)),
+    repeating-linear-gradient(
+      -25deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 13px
+    );
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  padding: clamp(14px, 2vw, 20px);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.history-kicker {
+  display: inline-block;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(248, 219, 162, 0.15);
+  border: 1px solid rgba(248, 219, 162, 0.26);
+  color: #f7d8a2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  padding: 5px 10px;
+}
+
+.history-header h1 {
+  margin: 8px 0 0;
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  color: #f8e6c1;
+}
+
+.history-back-btn {
+  border: 1px solid rgba(248, 218, 163, 0.38);
+  background: rgba(9, 18, 14, 0.42);
+  color: #f4deba;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.history-muted {
+  margin: 10px 0 0;
+  color: rgba(236, 225, 198, 0.84);
+}
+
+.history-table-wrap {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.history-table th,
+.history-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(236, 208, 158, 0.2);
+  color: #f6e6c8;
+}
+
+.history-table th {
+  color: #f8dbac;
+  font-weight: 700;
+}
+
+.history-load-more-btn {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #203327;
+  background: linear-gradient(120deg, #8fd4ac, #7ec89f);
+}
+
+.history-load-more-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.history-feedback {
+  margin: 10px 0 0;
+  border-radius: 10px;
+  border: 1px solid rgba(252, 218, 153, 0.24);
+  background: rgba(252, 218, 153, 0.11);
+  color: #f3dfb9;
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+@media (max-width: 620px) {
+  .history-header {
+    flex-direction: column;
+  }
+}

@@ -30,6 +30,7 @@ export async function initDatabase() {
     user: appConfig.db.user,
     password: appConfig.db.password,
     database: appConfig.db.database,
+    timezone: "+08:00",
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -45,6 +46,45 @@ export async function initDatabase() {
       PRIMARY KEY (id),
       UNIQUE KEY uk_users_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `);
+
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS matches (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '历史对局主键ID',
+      room_code VARCHAR(16) NOT NULL COMMENT '房间号',
+      room_instance_key VARCHAR(96) NOT NULL COMMENT '房间实例唯一键（roomCode+createdAt）',
+      owner_user_id BIGINT UNSIGNED NULL COMMENT '房主用户ID',
+      ended_at TIMESTAMP NOT NULL COMMENT '对局结束时间',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '历史记录创建时间',
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_matches_room_instance_key (room_instance_key),
+      KEY idx_matches_owner_user_id (owner_user_id),
+      KEY idx_matches_ended_at (ended_at),
+      CONSTRAINT fk_matches_owner_user
+        FOREIGN KEY (owner_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对局历史主表';
+  `);
+
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS match_players (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '对局玩家记录主键ID',
+      match_id BIGINT UNSIGNED NOT NULL COMMENT '关联对局ID',
+      user_id BIGINT UNSIGNED NOT NULL COMMENT '玩家用户ID',
+      username_snapshot VARCHAR(64) NOT NULL COMMENT '结算时用户名快照',
+      seat_index TINYINT UNSIGNED NOT NULL COMMENT '绝对座位下标（0-3）',
+      score INT NOT NULL COMMENT '该局结算分数',
+      \`rank\` TINYINT UNSIGNED NOT NULL COMMENT '该局名次',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_match_players_match_user (match_id, user_id),
+      KEY idx_match_players_user_match (user_id, match_id),
+      CONSTRAINT fk_match_players_match
+        FOREIGN KEY (match_id) REFERENCES matches(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对局玩家明细表';
   `);
 }
 

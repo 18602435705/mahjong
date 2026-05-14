@@ -4,6 +4,7 @@ import {
   applyGameAction,
   confirmRematch,
   endMatch,
+  getMatchHistory,
   getRoomView,
   leaveRoom,
   RoomError,
@@ -180,10 +181,10 @@ function registerRoomHandlers(socket) {
     }
   });
 
-  socket.on("room.match.end", (payload = {}, ack) => {
+  socket.on("room.match.end", async (payload = {}, ack) => {
     try {
       const roomCode = getRoomCode(payload);
-      const result = endMatch(user.id, roomCode);
+      const result = await endMatch(user.id, roomCode);
 
       const cleanup = subscriptions.get(roomCode);
       if (cleanup) {
@@ -192,6 +193,21 @@ function registerRoomHandlers(socket) {
       }
 
       ack?.({ status: "ok", result });
+    } catch (error) {
+      ack?.(toErrorResponse(error));
+    }
+  });
+
+  socket.on("room.history", async (payload = {}, ack) => {
+    try {
+      const history = await getMatchHistory(user.id, {
+        cursor: payload.cursor,
+        limit: payload.limit,
+      });
+      ack?.({
+        status: "ok",
+        ...history,
+      });
     } catch (error) {
       ack?.(toErrorResponse(error));
     }

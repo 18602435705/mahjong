@@ -138,6 +138,15 @@ export default function LobbyPage() {
             </div>
           </label>
 
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={isBusy}
+            onClick={() => navigate("/history")}
+          >
+            历史对局
+          </button>
+
           {feedback ? <p className="feedback">{feedback}</p> : null}
         </section>
       </main>
