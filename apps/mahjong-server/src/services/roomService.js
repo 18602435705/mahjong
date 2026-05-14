@@ -7,6 +7,7 @@ import {
 } from "../../../../packages/mahjong-core/dist/index.js";
 import { customAlphabet } from "nanoid";
 
+const HIDDEN_TILE = "*";
 const ROOM_CODE_DIGITS = "0123456789";
 const ROOM_CODE_LENGTH = 6;
 const ROOM_MAX_PLAYERS = 4;
@@ -273,7 +274,11 @@ function closeSubscribers(roomCode) {
   }
 
   for (const subscription of bucket) {
-    unregisterOnlineConnection(roomCode, subscription.userId, subscription.connectionId);
+    unregisterOnlineConnection(
+      roomCode,
+      subscription.userId,
+      subscription.connectionId,
+    );
     try {
       subscription.close?.();
     } catch {
@@ -301,7 +306,11 @@ function removeUserSubscribers(roomCode, userId) {
     }
 
     bucket.delete(subscription);
-    unregisterOnlineConnection(roomCode, subscription.userId, subscription.connectionId);
+    unregisterOnlineConnection(
+      roomCode,
+      subscription.userId,
+      subscription.connectionId,
+    );
     try {
       subscription.close?.();
     } catch {
@@ -367,21 +376,13 @@ function rotateIndex(absIndex, selfSeat) {
 }
 
 /**
- * 生成相对视角下的玩家展示名（自己固定显示为“你”）。
- */
-function toLocalPlayerName(username, localIndex) {
-  if (localIndex === 0) {
-    return "你";
-  }
-
-  return username;
-}
-
-/**
  * 在非结束阶段隐藏他家手牌内容，仅保留张数。
  */
 function withHiddenHand(player) {
-  const hiddenTiles = Array.from({ length: player.hand.length }, () => "W1");
+  const hiddenTiles = Array.from(
+    { length: player.hand.length },
+    () => HIDDEN_TILE,
+  );
   return {
     ...player,
     hand: hiddenTiles,
@@ -394,27 +395,24 @@ function withHiddenHand(player) {
  * 将服务端绝对对局状态转换为当前用户可见的相对视角状态。
  */
 function rotateAndMaskGameState(gameState, selfSeat) {
-  const rotatedPlayers = Array.from({ length: ROOM_MAX_PLAYERS }, (_, localIndex) => {
-    const absIndex = (selfSeat + localIndex) % ROOM_MAX_PLAYERS;
-    const basePlayer = gameState.players[absIndex];
+  const rotatedPlayers = Array.from(
+    { length: ROOM_MAX_PLAYERS },
+    (_, localIndex) => {
+      const absIndex = (selfSeat + localIndex) % ROOM_MAX_PLAYERS;
+      const basePlayer = gameState.players[absIndex];
 
-    const mappedPlayer = {
-      ...basePlayer,
-      name: toLocalPlayerName(basePlayer.name, localIndex),
-      isHuman: localIndex === 0,
-    };
+      if (gameState.phase === PHASE.GAME_OVER || localIndex === 0) {
+        return { ...basePlayer };
+      }
 
-    if (gameState.phase === PHASE.GAME_OVER || localIndex === 0) {
-      return mappedPlayer;
-    }
-
-    return withHiddenHand(mappedPlayer);
-  });
+      return withHiddenHand(basePlayer);
+    },
+  );
 
   const isGameOver = gameState.phase === PHASE.GAME_OVER;
   const maskedWall = isGameOver
     ? [...gameState.wall]
-    : Array.from({ length: gameState.wall.length }, () => "W1");
+    : Array.from({ length: gameState.wall.length }, () => HIDDEN_TILE);
 
   return {
     ...gameState,
@@ -502,7 +500,9 @@ function buildRoomView(room, userId) {
       room.ownerUserId === userId &&
       room.seats.every((seat) => seat !== null) &&
       room.seats.every((seat) => seat?.ready === true),
-    seats: room.seats.map((seat, index) => toSeatView(room.code, seat, index, userId)),
+    seats: room.seats.map((seat, index) =>
+      toSeatView(room.code, seat, index, userId),
+    ),
     game:
       room.gameState && room.status === "playing"
         ? rotateAndMaskGameState(room.gameState, selfSeat)
@@ -564,7 +564,7 @@ function buildMatchResult(room) {
         username: seat.username,
         score:
           room.status === "playing"
-            ? room.gameState?.players[seatIndex]?.score ?? 0
+            ? (room.gameState?.players[seatIndex]?.score ?? 0)
             : 0,
       };
     })
@@ -669,7 +669,10 @@ function mapClientActionToCoreAction(action, actor) {
       };
 
     default:
-      throw new RoomError(400, `Unsupported action type: ${String(actionType)}`);
+      throw new RoomError(
+        400,
+        `Unsupported action type: ${String(actionType)}`,
+      );
   }
 }
 
@@ -816,7 +819,6 @@ export function startGame(userId, roomCode) {
 
   room.seats.forEach((seat, index) => {
     state.players[index].name = seat.username;
-    state.players[index].isHuman = true;
     seat.ready = false;
   });
 
@@ -840,10 +842,7 @@ export function applyGameAction(userId, roomCode, action) {
     throw new RoomError(409, "Game is not active");
   }
 
-  const coreAction = mapClientActionToCoreAction(
-    action,
-    seatIndex,
-  );
+  const coreAction = mapClientActionToCoreAction(action, seatIndex);
 
   const prevState = room.gameState;
   const nextState = gameReducer(prevState, coreAction);
@@ -878,7 +877,10 @@ export function confirmRematch(userId, roomCode) {
   }
 
   if (room.gameState.phase !== PHASE.GAME_OVER) {
-    throw new RoomError(409, "Rematch is only available after round settlement");
+    throw new RoomError(
+      409,
+      "Rematch is only available after round settlement",
+    );
   }
 
   const seat = room.seats[seatIndex];
@@ -890,7 +892,9 @@ export function confirmRematch(userId, roomCode) {
     seat.ready = true;
   }
 
-  const everyoneConfirmed = room.seats.every((currentSeat) => currentSeat?.ready === true);
+  const everyoneConfirmed = room.seats.every(
+    (currentSeat) => currentSeat?.ready === true,
+  );
   if (everyoneConfirmed) {
     const nextState = gameReducer(room.gameState, {
       type: GAME_ACTION.NEXT_ROUND,
