@@ -1050,40 +1050,83 @@ export async function getMatchHistory(userId, options = {}) {
   const cursor = toHistoryCursor(options.cursor);
   const db = getDbPool();
 
-  const whereParts = ["mp.user_id = ?"];
+  const whereParts = ["subject.user_id = ?"];
   const params = [userId];
   if (cursor !== null) {
-    whereParts.push("mp.match_id < ?");
+    whereParts.push("subject.match_id < ?");
     params.push(cursor);
   }
   params.push(pageSize);
 
-  const [rows] = await db.query(
+  const [baseRows] = await db.query(
     `
       SELECT
-        mp.match_id AS matchId,
+        subject.match_id AS matchId,
         m.room_code AS roomCode,
         m.ended_at AS endedAt,
-        mp.seat_index AS mySeatIndex,
-        mp.score AS myScore,
-        mp.\`rank\` AS myRank
-      FROM match_players mp
-      INNER JOIN matches m ON m.id = mp.match_id
+        subject.seat_index AS mySeatIndex,
+        subject.score AS myScore,
+        subject.\`rank\` AS myRank
+      FROM match_players subject
+      INNER JOIN matches m ON m.id = subject.match_id
       WHERE ${whereParts.join(" AND ")}
-      ORDER BY mp.match_id DESC
+      ORDER BY subject.match_id DESC
       LIMIT ?
     `,
     params,
   );
 
-  const items = rows.map((row) => ({
+  const items = baseRows.map((row) => ({
     matchId: Number(row.matchId),
     roomCode: String(row.roomCode),
     endedAt: new Date(row.endedAt).toISOString(),
     mySeatIndex: Number(row.mySeatIndex),
     myScore: Number(row.myScore),
     myRank: Number(row.myRank),
+    players: [],
   }));
+
+  if (items.length > 0) {
+    const matchIds = items.map((item) => item.matchId);
+    const placeholders = matchIds.map(() => "?").join(", ");
+    const [participantRows] = await db.query(
+      `
+        SELECT
+          match_id AS matchId,
+          user_id AS userId,
+          username_snapshot AS username,
+          seat_index AS seatIndex,
+          score,
+          \`rank\` AS \`rank\`
+        FROM match_players
+        WHERE match_id IN (${placeholders})
+        ORDER BY match_id DESC, \`rank\` ASC, user_id ASC
+      `,
+      matchIds,
+    );
+
+    const playerByMatchId = new Map();
+    for (const row of participantRows) {
+      const matchId = Number(row.matchId);
+      let players = playerByMatchId.get(matchId);
+      if (!players) {
+        players = [];
+        playerByMatchId.set(matchId, players);
+      }
+
+      players.push({
+        userId: Number(row.userId),
+        username: String(row.username),
+        seatIndex: Number(row.seatIndex),
+        score: Number(row.score),
+        rank: Number(row.rank),
+      });
+    }
+
+    for (const item of items) {
+      item.players = playerByMatchId.get(item.matchId) ?? [];
+    }
+  }
   const nextCursor = items.length === pageSize ? items[items.length - 1].matchId : null;
 
   return {

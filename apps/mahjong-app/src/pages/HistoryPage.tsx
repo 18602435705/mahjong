@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMatchHistoryApi } from "../api/history";
+import { useAuth } from "../auth/useAuth";
 import type { MatchHistoryItem } from "../types/history";
 import "./HistoryPage.css";
 
@@ -8,6 +9,7 @@ const PAGE_SIZE = 20;
 
 export default function HistoryPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState<MatchHistoryItem[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +71,8 @@ export default function HistoryPage() {
     }
   }
 
+  const selfUserId = useMemo(() => user?.id ?? null, [user?.id]);
+
   return (
     <div className="history-page">
       <section className="history-card" aria-live="polite">
@@ -93,29 +97,48 @@ export default function HistoryPage() {
         ) : null}
 
         {!isLoading && items.length > 0 ? (
-          <div className="history-table-wrap">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>结束时间</th>
-                  <th>房间号</th>
-                  <th>名次</th>
-                  <th>积分</th>
-                  <th>座位</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={`history-${item.matchId}`}>
-                    <td>{new Date(item.endedAt).toLocaleString()}</td>
-                    <td>{item.roomCode}</td>
-                    <td>{item.myRank}</td>
-                    <td>{item.myScore}</td>
-                    <td>{item.mySeatIndex + 1}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="history-list">
+            {items.map((item) => (
+              <article key={`history-${item.matchId}`} className="history-item-card">
+                <header className="history-item-head">
+                  <div>
+                    <h2>{`房间 ${item.roomCode}`}</h2>
+                    <p>{new Date(item.endedAt).toLocaleString()}</p>
+                  </div>
+                  <div className="history-item-summary">
+                    <span>{`我的名次：第 ${item.myRank} 名`}</span>
+                    <span>{`我的积分：${item.myScore}`}</span>
+                    <span>{`我的座位：${item.mySeatIndex + 1}`}</span>
+                  </div>
+                </header>
+
+                <div className="history-table-wrap">
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>名次</th>
+                        <th>玩家</th>
+                        <th>积分</th>
+                        <th>座位</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.players.map((player) => (
+                        <tr key={`history-${item.matchId}-${player.userId}`}>
+                          <td>{player.rank}</td>
+                          <td>
+                            {player.username}
+                            {selfUserId !== null && player.userId === selfUserId ? "（你）" : ""}
+                          </td>
+                          <td>{player.score}</td>
+                          <td>{player.seatIndex + 1}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            ))}
           </div>
         ) : null}
 
