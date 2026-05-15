@@ -1,8 +1,8 @@
+import { appConfig } from "./config.js"; // 这里引入了环境变量，得放前面先执行
 import http from "node:http";
 import express from "express";
 import cors from "cors";
 import compression from "compression";
-import { appConfig } from "./config.js";
 import { initDatabase, pingDatabase } from "./db.js";
 import authRouter from "./routes/auth.js";
 import roomsRouter from "./routes/rooms.js";
@@ -65,7 +65,9 @@ async function startServer() {
   attachSocketServer(httpServer);
 
   httpServer.listen(appConfig.port, () => {
-    console.log(`mahjong-server listening on http://localhost:${appConfig.port}`);
+    console.log(
+      `mahjong-server listening on http://localhost:${appConfig.port}`,
+    );
   });
 }
 
