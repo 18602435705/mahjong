@@ -18,8 +18,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "tsc -p tsconfig.build.json --watch",
+    "build": "pnpm -C ../.. --filter mahjong-app exec tsc -p ../../packages/mahjong-core/tsconfig.build.json",
+    "dev": "pnpm -C ../.. --filter mahjong-app exec tsc -p ../../packages/mahjong-core/tsconfig.build.json --watch",
     "test": "echo \"No tests yet for mahjong-core\"",
     "lint": "echo \"No lint step for mahjong-core\""
   }
