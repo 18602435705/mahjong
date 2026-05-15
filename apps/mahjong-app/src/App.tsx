@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { installAudioUnlock } from "./actionAudio";
 import { AuthProvider } from "./auth/AuthContext";
 import AuthPage from "./pages/AuthPage";
+import OrientationManager from "./components/OrientationManager";
 import GamePage from "./pages/GamePage";
 import HistoryPage from "./pages/HistoryPage";
 import LobbyPage from "./pages/LobbyPage";
@@ -23,7 +24,14 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/lobby" element={<LobbyPage />} />
         <Route path="/history" element={<HistoryPage />} />
-        <Route path="/game" element={<GamePage />} />
+        <Route
+          path="/game"
+          element={
+            <OrientationManager>
+              <GamePage />
+            </OrientationManager>
+          }
+        />
         <Route path="/result" element={<ResultPage />} />
       </Route>
       <Route path="*" element={<RootRedirect />} />
