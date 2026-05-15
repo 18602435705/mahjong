@@ -123,16 +123,9 @@ function PlayerSeat(props: PlayerSeatProps) {
     <section
       className={`seat ${seatClass} ${isCurrent ? "current" : ""} ${
         isHumanActionPending ? "human-turn-active" : ""
-      } ${
-        isRevealedAIHand ? "revealed-ai-hand" : ""
-      }`}
+      } ${isRevealedAIHand ? "revealed-ai-hand" : ""}`}
     >
-      <SeatHeader
-        title={title}
-        score={player.score}
-        handCount={shouldShowHand ? undefined : player.hand.length}
-        online={seatOnline}
-      />
+      <SeatHeader title={title} score={player.score} online={seatOnline} />
 
       <div
         className={`seat-main-row ${showHand ? "seat-main-row-human" : "seat-main-row-ai"}`}
