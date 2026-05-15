@@ -12,7 +12,6 @@ import {
   PublicOnlyRoute,
   RootRedirect,
 } from "./router/RouteGuards";
-import RouteOrientationManager from "./orientation/RouteOrientationManager";
 
 function AppRoutes() {
   return (
@@ -40,9 +39,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <RouteOrientationManager enable={true}>
-          <AppRoutes />
-        </RouteOrientationManager>
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   );
