@@ -61,7 +61,7 @@ function getRoomCode(payload) {
 
 function registerRoomHandlers(socket) {
   const user = socket.data.user;
-  const subscriptions = new Map();
+  const subscriptions = new Map(); // 一个连接支持订阅多个房间（旁观多房/多频道订阅）
 
   const bindSubscription = (roomCode) => {
     const existingCleanup = subscriptions.get(roomCode);
