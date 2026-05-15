@@ -40,7 +40,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <RouteOrientationManager enable={false}>
+        <RouteOrientationManager enable={true}>
           <AppRoutes />
         </RouteOrientationManager>
       </BrowserRouter>
