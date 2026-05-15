@@ -9,23 +9,7 @@ interface ApiErrorResponse {
   message?: string;
 }
 
-function formatHostForUrl(hostname: string) {
-  // IPv6 host must be wrapped in brackets when constructing URLs manually.
-  return hostname.includes(":") ? `[${hostname}]` : hostname;
-}
-
-function getDefaultApiBaseUrl() {
-  if (typeof window === "undefined") {
-    return "http://127.0.0.1:3000";
-  }
-
-  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-  const host = formatHostForUrl(window.location.hostname || "127.0.0.1");
-  return `${protocol}//${host}:3000`;
-}
-
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || getDefaultApiBaseUrl();
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || "";
 
 function toErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {

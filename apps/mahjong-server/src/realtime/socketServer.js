@@ -220,6 +220,7 @@ function registerRoomHandlers(socket) {
 
 export function attachSocketServer(httpServer) {
   const io = new Server(httpServer, {
+    path: "/ws/game",
     cors: {
       origin: true,
       credentials: true,

@@ -335,6 +335,7 @@ export function useRoomSession(roomCode: string | null) {
     });
 
     const socket = io(API_BASE_URL, {
+      path: "/ws/game",
       auth: {
         token,
       },
